@@ -1,6 +1,6 @@
 # Site settings
 title: Oakes Blog
-SEOTitle: 你的博客 | Your Blog
+SEOTitle: 我的博客 | Oakes Blog
 header-img: img/homebg.jpg
 email: 
 description: 
@@ -70,17 +70,11 @@ sidebar-avatar: /img/avatar.jpg      # use absolute URL, seeing it's used in bot
 
 
 # Featured Tags
-featured-tags: false                     # whether or not using Feature-Tags
+featured-tags: true                     # whether or not using Feature-Tags
 featured-condition-size: 1              # A tag will be featured if the size of it is more than this condition value
 
 
 
 # Friends
-friends: [
-    {
-        title: "Hux Blog",
-        href: "http://huangxuan.me"
-    }
-]
 
 plugins: [jekyll-paginate]
