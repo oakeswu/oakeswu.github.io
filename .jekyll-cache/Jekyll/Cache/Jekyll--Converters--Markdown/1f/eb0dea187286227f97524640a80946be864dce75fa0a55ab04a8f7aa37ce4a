@@ -1,0 +1,145 @@
+I"e<h1 id="什么是抽象工厂模式">什么是抽象工厂模式</h1>
+<p>前面有说过普通工厂模式，是一网上教学系统来举例的，当时创建了SchoolPerson接口和SchoolPersonFactory工厂类，而抽象工厂模式就在SchoolPersonFactory工厂类上再进行一次封装</p>
+
+<h1 id="如何使用">如何使用</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public interface CompanyPerson {
+    /**
+     * 开始上班
+     */
+    void startWork();
+}
+
+public class Boss implements CompanyPerson{
+    @Override
+    public void startWork() {
+        System.out.println("开始会议");
+        System.out.println("聆听汇报");
+        System.out.println("------");
+    }
+}
+
+public class Employee implements CompanyPerson {
+    @Override
+    public void startWork() {
+        System.out.println("开始办公");
+        System.out.println("准备材料");
+        System.out.println("------");
+    }
+}
+
+public class CompanyPersonFactory extends Person {
+    @Override
+    public SchoolPerson getSchoolPerson(String name) {
+        return null;
+    }
+
+    @Override
+    public CompanyPerson getCompanyPerson(String name) {
+        if (StringUtils.isEmpty(name)) {
+            return null;
+        }
+        if ("boss".equalsIgnoreCase(name)) {
+            return new Boss();
+        } else if ("employee".equalsIgnoreCase(name)) {
+            return new Employee();
+        }
+        return null;
+    }
+}
+</code></pre></div></div>
+<p>我们模仿普通工厂方法的SchoolPerson创造了一个CompanyPerson，我们可以看下执行结果</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Connected to the target VM, address: '127.0.0.1:55625', transport: 'socket'
+开始会议
+聆听汇报
+------
+Disconnected from the target VM, address: '127.0.0.1:55625', transport: 'socket'
+开始办公
+准备材料
+------
+
+Process finished with exit code 0
+</code></pre></div></div>
+<p>但是大家可以看一下CompanyPersonFactory继承了一个Person类</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public abstract class Person {
+    /**
+     * 获取学校人员
+     */
+    public abstract SchoolPerson getSchoolPerson(String name);
+
+    /**
+     * 获取公司人员
+     */
+    public abstract CompanyPerson getCompanyPerson(String name);
+}
+
+public class SchoolPersonFactory extends Person {
+
+    @Override
+    public SchoolPerson getSchoolPerson(String name) {
+        if (StringUtils.isEmpty(name)) {
+            return null;
+        }
+        if ("student".equalsIgnoreCase(name)) {
+            return new Student();
+        } else if ("teacher".equalsIgnoreCase(name)) {
+            return new Teacher();
+        }
+        return null;
+    }
+
+    @Override
+    public CompanyPerson getCompanyPerson(String name) {
+        return null;
+    }
+}
+</code></pre></div></div>
+<p>我们可以看到Person类里面有两个抽象方法getSchoolPerson和getCompanyPerson，然后SchoolPersonFactory和CompanyPersonFactory都是Person类的子类，方便等会工厂类获取具体工厂</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class PersonFactory {
+    public Person getPersonFactory(String name) {
+        if (StringUtils.isEmpty(name)) {
+            return null;
+        }
+        if ("company".equalsIgnoreCase(name)) {
+            return new CompanyPersonFactory();
+        } else if ("school".equalsIgnoreCase(name)) {
+            return new SchoolPersonFactory();
+        }
+        return null;
+    }
+}
+
+public class PersonFactoryTest {
+
+    public static void main(String[] args) {
+        PersonFactory personFactory = new PersonFactory();
+        Person companyPersonFactory = personFactory.getPersonFactory("company");
+        companyPersonFactory.getCompanyPerson("boss").startWork();
+        companyPersonFactory.getCompanyPerson("employee").startWork();
+
+        Person schoolPersonFactory = personFactory.getPersonFactory("school");
+        schoolPersonFactory.getSchoolPerson("teacher").attendClass();
+        schoolPersonFactory.getSchoolPerson("student").attendClass();
+    }
+}
+</code></pre></div></div>
+<p>上面就是一个PersonFactory工厂类，我们可以看下执行结果</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Connected to the target VM, address: '127.0.0.1:56179', transport: 'socket'
+开始会议
+聆听汇报
+------
+开始办公
+准备材料
+------
+打开备案
+开始教学
+------
+打开书本
+开始学习
+------
+Disconnected from the target VM, address: '127.0.0.1:56179', transport: 'socket'
+
+Process finished with exit code 0
+</code></pre></div></div>
+<p>所以我们可以看到代码执行成功，之前有两个分别的工厂类SchoolPersonFactory和CompanyPersonFactory通过一个PersonFactory工厂获得，所以抽象工厂模式就是对普通工厂模式的进一步工厂</p>
+
+:ET

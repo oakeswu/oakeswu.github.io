@@ -1,0 +1,18 @@
+---
+layout:     post
+title:      "git pull报错"
+subtitle:   ""
+date:       2020-04-28
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - EffictiveJava
+---
+
+# 背景
+之前gitLab拉取下来的代码突然无法pull或push,并且报错（Please make sure you have the correct access rights and the repository exists）依据报错信息我们可以分析出可能的原因一是没有权限，二是仓库位置不对，所以我们开始查找原因
+
+# 排错
+1：检查是否是项目member，经查看自己属于项目组，所以考虑下一步可能
+2：检查下ssh key是否配置，经检查也存在
+3：检查仓库是否变更，发现异常，此项目最近由原项目组更改到我们项目组，所以仓库进行了变更，git可以使用命令git remote origin set-url [url]或者小乌龟直接setting -> Remote -> 更新URL 更新之后解决问题

@@ -1,0 +1,263 @@
+---
+layout:     post
+title:      "Java类加载器（ClassLoader）"
+subtitle:   ""
+date:       2020-04-30
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - JVM
+---
+
+# 什么是类加载器（ClassLoader）
+- java执行一个方法，会先把java代码编译成.class文件，ClassLoader类就是找到对应的已编译的class字节码文件，加载到虚拟机内存并初始化一个实例
+- ClassLoader可以分成BootStrap ClassLoader，ExtClassLoader，AppClassLoader，自定义ClassLoader。
+  1： Bootstrap ClassLoader是C++编写，用于加载\lib目录下的类库，并不是ClassLoader的子类，是JVM的一部分
+  2：ExtClassLoader负责\lib\ext目录下的类库，是ClassLoader类的子类
+  3：AppClassLoader负责加载classPath路径下的类库，也是ClassLoader的子类
+  4:  类的加载机制是双亲委派机制，双亲委派机制就是如果一个ClassLoader收到一个类需要家宅的请求，它会先检查该类是否已经加载，如果没有加载则会请求给parent ClassLoader去加载，此时就是一种递归，只有当parent ClassLoader无法加载该类时才会自己尝试去加载，这个等会我们可以通过源码仔细分析
+
+# 代码案例
+```
+public class ClassLoaderTest {
+
+    public static void main(String[] args) {
+        ClassLoader classLoader = ClassLoaderTest.class.getClassLoader();
+        System.out.println("----");
+        System.out.println(classLoader);
+        ClassLoader extClassLoader = classLoader.getParent();
+        System.out.println("----");
+        System.out.println(extClassLoader);
+        ClassLoader bootClassLoader = extClassLoader.getParent();
+        System.out.println("----");
+        System.out.println(bootClassLoader);
+    }
+}
+```
+上面我通过一段代码测试打印出ClassLoader的层级关系，我们先看下执行结果
+```
+Connected to the target VM, address: '127.0.0.1:65279', transport: 'socket'
+Disconnected from the target VM, address: '127.0.0.1:65279', transport: 'socket'
+----
+sun.misc.Launcher$AppClassLoader@18b4aac2
+----
+sun.misc.Launcher$ExtClassLoader@69222c14
+----
+null
+
+Process finished with exit code 0
+```
+我们可以看到这个三个分别是AppClassLoader,ExtClassLoader和null，这里为啥不是Bootstrap ClassLoader,因为前面说过Bootstrap ClassLoader是C++编写，无法通过获取它的java对象，所以这里输出null
+
+# ClassLoader源码（精简版）分析
+```
+/**
+ * A class loader is an object that is responsible for loading classes. The
+ * class <tt>ClassLoader</tt> is an abstract class.  Given the <a
+ * href="#name">binary name</a> of a class, a class loader should attempt to
+ * locate or generate data that constitutes a definition for the class.  A
+ * typical strategy is to transform the name into a file name and then read a
+ * "class file" of that name from a file system.
+ **/
+public abstract class ClassLoader {
+    // The parent class loader for delegation
+    // 双亲加载器，在构造函数中指定
+    private final ClassLoader parent;
+
+    // Maps class name to the corresponding lock object when the current
+    // class loader is parallel capable.
+    // 判断当前类加载器是否可能发生并发加载
+    private final ConcurrentHashMap<String, Object> parallelLockMap;
+
+    /**
+     * Encapsulates the set of parallel capable loader types.
+     * 该类用来注册或验证加载器为并发加载器
+     */
+    private static class ParallelLoaders {
+        private ParallelLoaders() {}
+
+        // the set of parallel capable loader types
+        private static final Set<Class<? extends ClassLoader>> loaderTypes =
+            Collections.newSetFromMap(
+                new WeakHashMap<Class<? extends ClassLoader>, Boolean>());
+        static {
+            synchronized (loaderTypes) { loaderTypes.add(ClassLoader.class); }
+        }
+
+        /**
+         * Registers the given class loader type as parallel capabale.
+         * Returns {@code true} is successfully registered; {@code false} if
+         * loader's super class is not registered.
+         */
+        static boolean register(Class<? extends ClassLoader> c) {
+            synchronized (loaderTypes) {
+                if (loaderTypes.contains(c.getSuperclass())) {
+                    // register the class loader as parallel capable
+                    // if and only if all of its super classes are.
+                    // Note: given current classloading sequence, if
+                    // the immediate super class is parallel capable,
+                    // all the super classes higher up must be too.
+                    loaderTypes.add(c);
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        /**
+         * Returns {@code true} if the given class loader type is
+         * registered as parallel capable.
+         */
+        static boolean isRegistered(Class<? extends ClassLoader> c) {
+            synchronized (loaderTypes) {
+                return loaderTypes.contains(c);
+            }
+        }
+    }
+
+    private ClassLoader(Void unused, ClassLoader parent) {
+        this.parent = parent;
+        if (ParallelLoaders.isRegistered(this.getClass())) {
+            parallelLockMap = new ConcurrentHashMap<>();
+            package2certs = new ConcurrentHashMap<>();
+            domains =
+                Collections.synchronizedSet(new HashSet<ProtectionDomain>());
+            assertionLock = new Object();
+        } else {
+            // no finer-grained lock; lock on the classloader instance
+            parallelLockMap = null;
+            package2certs = new Hashtable<>();
+            domains = new HashSet<>();
+            assertionLock = this;
+        }
+    }
+    
+    /**
+     * Loads the class with the specified <a href="#name">binary name</a>.
+     * This method searches for classes in the same manner as the {@link
+     * #loadClass(String, boolean)} method.  It is invoked by the Java virtual
+     * machine to resolve class references.  Invoking this method is equivalent
+     * to invoking {@link #loadClass(String, boolean) <tt>loadClass(name,
+     * false)</tt>}
+      **/
+    public Class<?> loadClass(String name) throws ClassNotFoundException {
+        return loadClass(name, false);
+    }
+    
+    /**
+     * Loads the class with the specified <a href="#name">binary name</a>.  The
+     * default implementation of this method searches for classes in the
+     * following order:
+     *
+     * <ol>
+     *
+     *   <li><p> Invoke {@link #findLoadedClass(String)} to check if the class
+     *   has already been loaded.  </p></li>
+     *
+     *   <li><p> Invoke the {@link #loadClass(String) <tt>loadClass</tt>} method
+     *   on the parent class loader.  If the parent is <tt>null</tt> the class
+     *   loader built-in to the virtual machine is used, instead.  </p></li>
+     *
+     *   <li><p> Invoke the {@link #findClass(String)} method to find the
+     *   class.  </p></li>
+     *
+     * </ol>
+     *
+     * <p> If the class was found using the above steps, and the
+     * <tt>resolve</tt> flag is true, this method will then invoke the {@link
+     * #resolveClass(Class)} method on the resulting <tt>Class</tt> object.
+     **/
+    protected Class<?> loadClass(String name, boolean resolve)
+        throws ClassNotFoundException
+    {
+        synchronized (getClassLoadingLock(name)) {
+            // First, check if the class has already been loaded
+            Class<?> c = findLoadedClass(name);
+            if (c == null) {
+                long t0 = System.nanoTime();
+                try {
+                    if (parent != null) {
+                        c = parent.loadClass(name, false);
+                    } else {
+                        c = findBootstrapClassOrNull(name);
+                    }
+                } catch (ClassNotFoundException e) {
+                    // ClassNotFoundException thrown if class not found
+                    // from the non-null parent class loader
+                }
+
+                if (c == null) {
+                    // If still not found, then invoke findClass in order
+                    // to find the class.
+                    long t1 = System.nanoTime();
+                    c = findClass(name);
+
+                    // this is the defining class loader; record the stats
+                    sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);
+                    sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);
+                    sun.misc.PerfCounter.getFindClasses().increment();
+                }
+            }
+            if (resolve) {
+                resolveClass(c);
+            }
+            return c;
+        }
+    }
+    
+     /**
+     * Returns the lock object for class loading operations.
+     * For backward compatibility, the default implementation of this method
+     * behaves as follows. If this ClassLoader object is registered as
+     * parallel capable, the method returns a dedicated object associated
+     * with the specified class name. Otherwise, the method returns this
+     * ClassLoader object.
+     * 如果加载器不是并发加载器，直接返回当前对象，如果是则新创建一个对象，注册进
+        parallelLockMap并返回新创建的对象
+     **/
+    protected Object getClassLoadingLock(String className) {
+        Object lock = this;
+        if (parallelLockMap != null) {
+            Object newLock = new Object();
+            lock = parallelLockMap.putIfAbsent(className, newLock);
+            if (lock == null) {
+                lock = newLock;
+            }
+        }
+        return lock;
+    }
+
+    /**
+     * Returns the class with the given <a href="#name">binary name</a> if this
+     * loader has been recorded by the Java virtual machine as an initiating
+     * loader of a class with that <a href="#name">binary name</a>.  Otherwise
+     * <tt>null</tt> is returned.
+      **/
+    protected final Class<?> findLoadedClass(String name) {
+        if (!checkName(name))
+            return null;
+        return findLoadedClass0(name);
+    }
+
+    /**
+     * Returns a class loaded by the bootstrap class loader;
+     * or return null if not found.
+     */
+    private Class<?> findBootstrapClassOrNull(String name)
+    {
+        if (!checkName(name)) return null;
+
+        return findBootstrapClass(name);
+    }
+}
+```
+上面就是ClassLoader类的简化版源码，我们主要关注一下其中的loadClass方法，我们可以看到里面是一个synchronized同步代码块，步骤如下
+1： 先根据getClassLoadingLock方法获取相应的锁
+2： 通过findLoadedClass查看类是否已加载，如果已经加载则返回，如果没有则进入下一步
+3： 通过parent ClassLoader去执行loadClass方法，如果parent不存在则调用findBootstrapClassOrNull方法去查找
+4：通过parent ClassLoader以及Bootstrap ClassLoader都没找到的话调用findClass方法查找
+
+# 总结
+
+java自带的类加载器有三个，它们各自加载不同的区域内容，也实现了双亲委派机制，增加了安全性。

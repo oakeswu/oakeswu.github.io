@@ -1,0 +1,97 @@
+---
+layout:     post
+title:      "StopWatch使用及源码解析"
+subtitle:   ""
+date:       2020-04-21
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - 工具类
+---
+
+# 使用背景
+由于刚接手另一组开发的项目，发现其中接口耗时很长，所以决定查看到底哪里耗时长，进而思考如何进行优化
+
+# 什么是StopWatch
+StopWatch是org.springframework.util下的一个工具类，主要用来查看任务执行时间，查看源码可以发现其实其实底层仍然是使用System.currentTimeMillis()方法来计时，start()中给currentTaskName和startTimeMillis赋值，然后stop()方法中currentTaskName和lastTime生成TaskInfo对象，并放到taskList里，最后prettyprint()方法循环打印输出即可，源码（精简版）如下
+
+```
+/** Name of the current task */
+private String currentTaskName;
+
+/** Start time of the current task */
+private long startTimeMillis;
+
+private final List<TaskInfo> taskList = new LinkedList<TaskInfo>();
+
+public void start(String taskName) throws IllegalStateException {
+	if (this.running) {
+		throw new IllegalStateException("Can't start StopWatch: it's already running");
+	}
+	this.running = true;
+	this.currentTaskName = taskName;
+	this.startTimeMillis = System.currentTimeMillis();
+}
+
+public void stop() throws IllegalStateException {
+	if (!this.running) {
+		throw new IllegalStateException("Can't stop StopWatch: it's not running");
+	}
+	long lastTime = System.currentTimeMillis() - this.startTimeMillis;
+	this.totalTimeMillis += lastTime;
+	this.lastTaskInfo = new TaskInfo(this.currentTaskName, lastTime);
+	if (this.keepTaskList) {
+		this.taskList.add(lastTaskInfo);
+	}
+	++this.taskCount;
+	this.running = false;
+	this.currentTaskName = null;
+}
+
+public static final class TaskInfo {
+	private final String taskName;
+	private final long timeMillis;
+	TaskInfo(String taskName, long timeMillis) {
+		this.taskName = taskName;
+		this.timeMillis = timeMillis;
+	}
+}
+```
+# 如何使用
+```
+public class StopWatchTest {
+      public static void main(String[] args) {
+          try {
+              StopWatch stopWatch = new StopWatch();
+              stopWatch.start("fun1");
+              fun1();
+              stopWatch.stop();
+              stopWatch.start("fun2");
+              fun2();
+              stopWatch.stop();
+              System.out.println(stopWatch.prettyPrint());
+          } catch (Exception e) {
+              e.printStackTrace();
+          }
+      }
+
+      private static void fun1() throws Exception {
+          Thread.sleep(1000);
+      }
+    
+      private static void fun2() throws Exception {
+          Thread.sleep(2000);
+       }
+}
+```
+然后可以看到结果
+```
+StopWatch '': running time (millis) = 3011
+-----------------------------------------
+ms     %     Task name
+-----------------------------------------
+01010  034%  fun1
+02001  066%  fun2
+```
+
+

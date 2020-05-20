@@ -1,0 +1,44 @@
+---
+layout:     post
+title:      "hive中的collect_list和collect_set"
+subtitle:   ""
+date:       2020-04-24
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Hive
+---
+
+# 需求背景
+一个学生对应一个班级号和名称，此时需要统计每个班级的学生
+
+# 创建数据
+```
+use db_name;
+create table student_test(
+	classno int COMMENT '班级名称',
+  	name STRING COMMENT '学生名称'
+) 
+comment '学生表'
+
+insert into student_test values(1,'小明');
+insert into student_test values(1,'小王');
+insert into student_test values(1,'小明');
+insert into student_test values(2,'小王');
+```
+造完的数据如图所示：
+![image.png](https://upload-images.jianshu.io/upload_images/9082703-d50424a4c4867579.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+# 使用
+```
+select classno,collect_list(name) from tmp_youdb.student_test group by classno
+```
+![image.png](https://upload-images.jianshu.io/upload_images/9082703-711f992eaaf57763.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+```
+select classno,collect_set(name) from tmp_youdb.student_test group by classno
+```
+![image.png](https://upload-images.jianshu.io/upload_images/9082703-cef8ab4a2a567d2d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+# 总结
+从上面可以看出collect_list和collect_set其实就是行转列，需要注意的就是行转列的时候是无序的，如需按照某个字段排序整合，可以使用sort_array

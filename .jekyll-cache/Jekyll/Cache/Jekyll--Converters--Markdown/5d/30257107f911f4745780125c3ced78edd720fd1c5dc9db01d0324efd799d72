@@ -1,0 +1,32 @@
+I"�<h1 id="关于explain命令">关于explain命令</h1>
+<p>explain命令常用在在优化sql慢查询中，一般常见的问题都能通过explain找到优化点。explain会返回12个字段，它们有各自的含义（详细可查看https://dev.mysql.com/doc/refman/5.7/en/explain-output.html）</p>
+<ul>
+  <li>id
+id字段表示的是select子句或操作表的顺序，不同的id有大到小执行，相同的id由上到下执行。</li>
+  <li>select_type
+select_type字段表示查询的类型，**SIMPLE（简单查询，不包含子查询和union），PRIMARY（包含union或者子查询的外查询），SUBQUERY（子查询中的子查询），DERIVED ，UNION（union后面的查询），</li>
+  <li>partitions
+partitions表示query结果记录匹配的分区，非分区表返回null</li>
+  <li>table
+table表示正查询的表，可以表名或别名</li>
+  <li>type
+type有很多值，从好到差依次为system，const，eq_ref，ref，fulltext，ref_or_null，index_merge，unique_subquery，index_subquery，range，index，all。我们一般能看到const（命中主键或者唯一索引），ref（命中到非主键或者唯一索引的索引）</li>
+  <li>possible_keys
+possible_key表示mysql可能用来查找数据的索引字段</li>
+  <li>key 
+实际使用到的索引字段</li>
+  <li>key_len
+实际使用到的索引字段长度</li>
+  <li>ref
+表格中命中索引的字段或常量</li>
+  <li>rows
+表示执行query需要扫描的行数</li>
+  <li>filtered 
+表示查询中过滤到的预估百分比</li>
+  <li><strong>Extra</strong> 
+表示mysql执行query中的格外信息，一般我们需要关注using filesort和using temporary。using filesort表示排序不能使用到索引，using tmporary表示使用了临时表存储中间结果
+    <h1 id="总结">总结</h1>
+    <p>一般mysql慢查询的优化可以先explain看看执行计划，并且可以看看mysql执行的io大小，基本就可以找出慢查询原因了</p>
+  </li>
+</ul>
+:ET

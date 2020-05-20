@@ -1,0 +1,64 @@
+---
+layout:     post
+title:      "分布式锁-Redis实现"
+subtitle:   ""
+date:       2020-04-19
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - 分布式
+---
+
+#1.业务场景
+
+用户注册功能中用户数据一般入库前都会先判断用户是否已注册，如果新用户连续点击两次注册的请求很可能会创建两条用户信息，为了避免这种情况发生需要使用到分布式锁
+
+#2.Redis命令setnx和setex
+
+setnx(key,value) 命令在指定的 key 不存在时，为 key 设置指定的值，设置成功返回1，失败返回0; 
+
+setex(key, timeout, value) 命令为指定的 key 设置值及其过期时间。
+
+#3.思路实现
+
+用户先尝试获取分布式锁，如果成功就执行注册，执行完成之后释放锁
+
+```
+if (setnx(key, 1) == 1) {
+    try {
+        register()
+    } finally {
+        del(key)
+    }      
+}
+```
+但是上面代码存在两个问题，1是死锁，2是del误删
+
+我们先看死锁的问题，如果机器或线程在register过程中出现问题直接挂掉就会导致当前锁一直被占用无法被其他获取从而出现死锁，所以我们需要给锁一个自动失效的时间，优化后的代码变成了
+
+```
+if (setnx(key, value) == 1) {
+    setex(key, timeout, value)
+    try {
+        register()
+    } finally {
+        del(key)
+    }      
+}
+```
+
+上面的代码增加了一个设置分布式锁，但是仍然有风险，因为并没有获取锁跟设置锁失效时间不是原子操作，有可能因为设置生效时间失败而导致死锁，所以可以在代码中通过代码实现原子操作或者使用redis在2.6.12版本后增加的set(key,value, time,nx)命令，优化后的代码为
+
+```
+if (set(key, value, timeout, nx) == 1) {
+    try {
+        register()
+    } finally {
+        del(key)
+    }      
+}
+
+```
+
+上面代码解决了死锁的问题，但是一台机器或者线程A获取锁之后设置的时间不够长，但是register执行的时间太长，导致注册过程中锁就释放了，另一台机器或者线程B通过set获取到锁，但是此时A执行完成执行del就可能误删B设置的锁。可以在代码中del前进行一次判断是否是当前机器线程即可
+

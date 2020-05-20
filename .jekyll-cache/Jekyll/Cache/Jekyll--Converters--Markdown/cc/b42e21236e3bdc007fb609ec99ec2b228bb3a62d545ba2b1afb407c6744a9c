@@ -1,0 +1,131 @@
+I"�<h1 id="runnable源码分析">Runnable源码分析</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public interface Runnable {
+    /**
+     * When an object implementing interface &lt;code&gt;Runnable&lt;/code&gt; is used
+     * to create a thread, starting the thread causes the object's
+     * &lt;code&gt;run&lt;/code&gt; method to be called in that separately executing
+     * thread.
+     * &lt;p&gt;
+     * The general contract of the method &lt;code&gt;run&lt;/code&gt; is that it may
+     * take any action whatsoever.
+     *
+     * @see     java.lang.Thread#run()
+     */
+    public abstract void run();
+}
+</code></pre></div></div>
+<p>可以看出Runnable只有一个run()方法</p>
+
+<h1 id="thread简化">Thread（简化）</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class Thread implements Runnable {
+    private volatile String name;
+    private int            priority;
+    private boolean     daemon = false;
+    private Runnable target;
+    /**
+     * Returns a reference to the currently executing thread object.
+     *
+     * @return  the currently executing thread.
+     */
+    public static native Thread currentThread();
+    public static native void sleep(long millis) throws InterruptedException
+    public static void sleep(long millis, int nanos)
+    throws InterruptedException {
+        if (millis &lt; 0) {
+            throw new IllegalArgumentException("timeout value is negative");
+        }
+
+        if (nanos &lt; 0 || nanos &gt; 999999) {
+            throw new IllegalArgumentException(
+                                "nanosecond timeout value out of range");
+        }
+
+        if (nanos &gt;= 500000 || (nanos != 0 &amp;&amp; millis == 0)) {
+            millis++;
+        }
+
+        sleep(millis);
+    }
+
+    public Thread() {
+        init(null, null, "Thread-" + nextThreadNum(), 0);
+    }
+    public Thread(Runnable target) {
+        init(null, target, "Thread-" + nextThreadNum(), 0);
+    }
+    public Thread(Runnable target, String name) {
+        init(null, target, name, 0);
+    }
+
+    /**
+     * Causes this thread to begin execution; the Java Virtual Machine
+     * calls the &lt;code&gt;run&lt;/code&gt; method of this thread.
+     * &lt;p&gt;
+     * The result is that two threads are running concurrently: the
+     * current thread (which returns from the call to the
+     * &lt;code&gt;start&lt;/code&gt; method) and the other thread (which executes its
+     * &lt;code&gt;run&lt;/code&gt; method).
+     * &lt;p&gt;
+     * It is never legal to start a thread more than once.
+     * In particular, a thread may not be restarted once it has completed
+     * execution.
+     *
+     * @exception  IllegalThreadStateException  if the thread was already
+     *               started.
+     * @see        #run()
+     * @see        #stop()
+     */
+    public synchronized void start() {
+        /**
+         * This method is not invoked for the main method thread or "system"
+         * group threads created/set up by the VM. Any new functionality added
+         * to this method in the future may have to also be added to the VM.
+         *
+         * A zero status value corresponds to state "NEW".
+         */
+        if (threadStatus != 0)
+            throw new IllegalThreadStateException();
+
+        /* Notify the group that this thread is about to be started
+         * so that it can be added to the group's list of threads
+         * and the group's unstarted count can be decremented. */
+        group.add(this);
+
+        boolean started = false;
+        try {
+            start0();
+            started = true;
+        } finally {
+            try {
+                if (!started) {
+                    group.threadStartFailed(this);
+                }
+            } catch (Throwable ignore) {
+                /* do nothing. If start0 threw a Throwable then
+                  it will be passed up the call stack */
+            }
+        }
+    }
+    
+    /**
+     * If this thread was constructed using a separate
+     * &lt;code&gt;Runnable&lt;/code&gt; run object, then that
+     * &lt;code&gt;Runnable&lt;/code&gt; object's &lt;code&gt;run&lt;/code&gt; method is called;
+     * otherwise, this method does nothing and returns.
+     * &lt;p&gt;
+     * Subclasses of &lt;code&gt;Thread&lt;/code&gt; should override this method.
+     *
+     * @see     #start()
+     * @see     #stop()
+     * @see     #Thread(ThreadGroup, Runnable, String)
+     */
+    @Override
+    public void run() {
+        if (target != null) {
+            target.run();
+        }
+    }
+}
+</code></pre></div></div>
+<p>上面是Thread的简化源码，我们可以看到直接上Thread就是继承的Runnable，Thread的start方法其实最终执行的仍然是run方法。</p>
+:ET

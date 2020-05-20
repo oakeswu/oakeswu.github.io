@@ -1,0 +1,60 @@
+I"v
+<h1 id="accessibleobject是什么">AccessibleObject是什么</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>The AccessibleObject class is the base class for Field, Method and
+Constructor objects.  It provides the ability to flag a reflected
+object as suppressing default Java language access control check
+when it is used. 
+</code></pre></div></div>
+<p>我们可以看下jdk自带的注释，说AccessibleObject 类是Field，Method，Constructors对象的基本类，它可以破解java对反射对象的访问控制检查。</p>
+
+<h1 id="源码精简版">源码（精简版）</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class AccessibleObject implements AnnotatedElement {
+    /**
+    * The Permission object that is used to check whether a client
+    * has sufficient privilege to defeat Java language access
+    * control checks.
+    **/
+    static final private java.security.Permission ACCESS_PERMISSION =
+    new ReflectPermission("suppressAccessChecks");
+    
+    // Indicates whether language-level access checks are overridden
+    // by this object. Initializes to "false". This field is used by
+    // Field, Method, and Constructor.
+    boolean override;
+    
+    //Get the value of the {@code accessible} flag for this object.
+    public boolean isAccessible() {
+        return override;
+    }
+    
+    public static void setAccessible(AccessibleObject[] array, boolean flag)
+            throws SecurityException {
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) sm.checkPermission(ACCESS_PERMISSION);
+        for (int i = 0; i &lt; array.length; i++) {
+            setAccessible0(array[i], flag);
+        }
+    }
+    
+    public void setAccessible(boolean flag) throws SecurityException {
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) sm.checkPermission(ACCESS_PERMISSION);
+        setAccessible0(this, flag);
+    }
+    
+    private static void setAccessible0(AccessibleObject obj, boolean flag)
+            throws SecurityException
+    {
+        if (obj instanceof Constructor &amp;&amp; flag == true) {
+            Constructor&lt;?&gt; c = (Constructor&lt;?&gt;)obj;
+            if (c.getDeclaringClass() == Class.class) {
+                throw new SecurityException("Cannot make a java.lang.Class" +
+                        " constructor accessible");
+            }
+        }
+        obj.override = flag;
+    }
+}
+</code></pre></div></div>
+<p>里面最主要方法就是setAccessible(boolean flag)，这个方法可以改变Field，Method，Constructor的访问控制，在反射中运用较多</p>
+:ET

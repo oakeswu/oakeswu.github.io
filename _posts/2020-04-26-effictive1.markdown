@@ -1,0 +1,72 @@
+---
+layout:     post
+title:      "Enum中的valueOf"
+subtitle:   ""
+date:       2020-04-26
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - EffictiveJava
+---
+
+# 项目背景
+在使用枚举的时候存在需要通过字符串来获取枚举的情况，当传参字段与枚举字段完全相同的情况下我们就可以使用Enum类中valueOf() 方法，不需要单独写一个方法
+
+#Enum valueOf
+```
+/**
+   * Returns the enum constant of the specified enum type with the
+   * specified name.  The name must match exactly an identifier used
+   * to declare an enum constant in this type.  (Extraneous whitespace
+   * characters are not permitted.)
+   **/
+public static <T extends Enum<T>> T valueOf(Class<T> enumType,
+                                                String name) {
+    T result = enumType.enumConstantDirectory().get(name);
+    if (result != null)
+        return result;
+    if (name == null)
+         throw new NullPointerException("Name is null");
+    throw new IllegalArgumentException(
+        "No enum constant " + enumType.getCanonicalName() + "." + name);
+}
+```
+我们可以看到valueOf方法其实就是传参name跟枚举常量一样时返回对应的枚举
+
+# 使用案例
+```
+public enum TrafficType {
+    Red("红灯"),
+    Green("绿灯"),
+    Yellow("黄灯");
+
+    private String name;
+
+    TrafficType(String name) {
+        this.name = name;
+    }
+}
+
+public class TrafficTypeTest {
+
+    public static void main(String[] args) {
+        System.out.println(TrafficType.valueOf("Red"));
+        System.out.println("----");
+        System.out.println(TrafficType.valueOf("red"));
+    }
+}
+```
+上面我定义了一个红绿灯的枚举，想要通过传值或者枚举，此时看下结果
+```
+Connected to the target VM, address: '127.0.0.1:62338', transport: 'socket'
+Red
+----
+Disconnected from the target VM, address: '127.0.0.1:62338', transport: 'socket'
+Exception in thread "main" java.lang.IllegalArgumentException: No enum constant test.TrafficType.red
+	at java.lang.Enum.valueOf(Enum.java:238)
+	at test.TrafficType.valueOf(TrafficType.java:7)
+	at test.TrafficTypeTest.main(TrafficTypeTest.java:12)
+
+Process finished with exit code 1
+```
+我们可以看到只有当传参跟枚举一样时才能返回正确的枚举，不然会报一个IllegalArgumentException的异常

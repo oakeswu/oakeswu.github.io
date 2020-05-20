@@ -1,0 +1,32 @@
+I"�<h1 id="需求背景">需求背景</h1>
+<p>因项目中需要一张hive表存储多个数据来源的数据，为了区分不同来源的数据，所以增加了一个type字段，为了各自来源的数据互补干扰，所以增加了type的partition分区</p>
+
+<h1 id="什么是partition">什么是partition</h1>
+<p>hive其实是存储在hdfs的抽象，一个partition实际对应于hdfs的一个目录，所以各个partition在hdfs是独立操作互不干扰的。</p>
+
+<h1 id="如何使用partition">如何使用partition</h1>
+<p>1 我们可以看下建表的语法：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CREATE [EXTERNAL] 
+TABLE 
+[IF NOT EXISTS] table_name 
+[(col_name data_type [COMMENT col_comment], ...)] 
+[COMMENT table_comment] 
+[PARTITIONED BY (col_name data_type [COMMENT col_comment], ...)] [CLUSTERED BY (col_name, col_name, ...) 
+[SORTED BY (col_name [ASC|DESC], ...)] INTO num_buckets BUCKETS] 
+[ROW FORMAT row_format]
+ [STORED AS file_format] 
+[LOCATION hdfs_path]
+</code></pre></div></div>
+
+<p>我们可以看到可以通过partitioned by来增加分区，不过需要注意的是partitioned by后面的col_name也会成为一个字段，所以不用在前面的col_name重复定义</p>
+
+<p>2 如何查看表的分区</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> show partitions table_name;
+</code></pre></div></div>
+<p>上面命令会显示出表分区的具体内容</p>
+
+<h1 id="为什么使用partittion">为什么使用partittion</h1>
+<p>1 使用下来partition最大的好处是可以互不干扰的操作自己的分区数据
+2 查资料说partition可以缩小查询范围，加快数据的检索速度</p>
+:ET
