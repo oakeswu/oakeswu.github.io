@@ -63,7 +63,7 @@ ga_domain:
 
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
-sidebar-about-description: "四年Coder,Java后端,ES,业余Dancer"
+sidebar-about-description: "Coder,Java后端,ES,业余Dancer"
 sidebar-avatar: /img/avatar.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 

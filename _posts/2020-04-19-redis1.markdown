@@ -6,7 +6,7 @@ date:       2020-04-19
 author:     "OakesWu"
 header-img: "img/post-bg-2015.jpg"
 tags:
-    - 分布式
+    - Redis
 ---
 
 #1.业务场景

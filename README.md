@@ -1,9 +1,5 @@
-# HuxBlog Boilerplate
+# OakesWu blog
 
-##### This is the boilerplate of [Hux Blog](https://github.com/Huxpro/huxpro.github.io), all documents is over there!
+## This blog is to organize and record my learning, there may be some errors or omissions, please let me know it and correct it, thank you very much!
 
-#### [View Boilerplate &rarr;](http://huangxuan.me/huxblog-boilerplate/)
-
-#### [View Live Hux Blog &rarr;](http://huangxuan.me)
-
-## If you like Hux Blog, Please star [huxpro.github.io repo](https://github.com/Huxpro/huxpro.github.io) instead of this! Thank you!
+## This project is built on Huxpro project, if you want to learn more, you can  click  [huxpro.github.io repo](https://github.com/Huxpro/huxpro.github.io) 
