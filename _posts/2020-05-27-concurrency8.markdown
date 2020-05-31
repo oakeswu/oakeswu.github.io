@@ -1,0 +1,200 @@
+---
+layout:     post
+title:      "阻塞队列BlockingQueue"
+subtitle:   ""
+date:       2020-05-25
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Java并发
+---
+
+#前提
+说到SynchronousQueue，LinkedBlockingQueue ，ArrayBlockingQueue就不得不先提一下BlockingQueue这个接口，我们先看下BlockingQueue的关系图
+![](https://upload-images.jianshu.io/upload_images/9082703-629424f133ab4d9a.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+然后BlockingQueue有几个方法必须说一下：
+![](https://upload-images.jianshu.io/upload_images/9082703-2f6ecfaf83e22059.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+我们看put和take就能知道为啥叫阻塞（Blocking）队列了，就是因为在原始Queue加上了会阻塞等待的put和take方法。
+
+# 三者异同
+- SynchronousQueue本身没有容量存储元素，是通过管理提交操作的线程队列来实现阻塞队列的。ArrayBlockingQueue是通过数组来存储元素的队列，并且里面通过一个ReetrantLock和Condition实现线程安全。LinkedBlockingQueue 是通过链表来存储元素的队列，也是通过ReetrantLock和Condition实现的线程安全，但是入队和出队用的是两个不同的ReetrantLock锁。
+- SynchronousQueue最多就是线程入队的一个数据，ArrayBlockingQueue构造函数必须置顶初始化数组容量大小，所以是一个有界队列，LinkedBlockingQueue构造函数可以指定初始化容量大小，如果不指定就是Integer.MaxValue的有界队列
+我们主要分析下ArrayBlockingQueue的源码
+
+# ArrayBlockingQueue源码精简版
+```
+public class ArrayBlockingQueue<E> extends AbstractQueue<E> implements BlockingQueue<E>, Serializable {
+    //存储元素用的数组
+    final Object[] items;
+    //队首元素的下标
+    int takeIndex;
+    //队尾元素的下标
+    int putIndex;
+    //队列的元素个数
+    int count;
+    //通过ReentrantLock来实现线程安全
+    final ReentrantLock lock;
+    private final Condition notEmpty;
+    private final Condition notFull;
+    
+    //默认的构造函数必须传入队列大小，所以是有界队列，可以指定是否采用公平锁
+    public ArrayBlockingQueue(int capacity) {
+        this(capacity, false);
+    }
+    public ArrayBlockingQueue(int capacity, boolean fair) {
+        if (capacity <= 0)
+            throw new IllegalArgumentException();
+        this.items = new Object[capacity];
+        lock = new ReentrantLock(fair);
+        notEmpty = lock.newCondition();
+        notFull =  lock.newCondition();
+    }
+    
+    //offer方法添加数据，不会阻塞线程
+    public boolean offer(E e) {
+        Objects.requireNonNull(e);
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            //如果队列已经满了的话直接就返回false
+            if (count == items.length)
+                return false;
+            else {
+                //如果队列没有满，就调用enqueue方法将元素添加到队列中
+                enqueue(e);
+                return true;
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    //增加一个等待时间的offer方法
+    public boolean offer(E e, long timeout, TimeUnit unit)
+        throws InterruptedException {
+
+        Objects.requireNonNull(e);
+        long nanos = unit.toNanos(timeout);
+        final ReentrantLock lock = this.lock;
+        //获取可中断锁
+        lock.lockInterruptibly();
+        try {
+            while (count == items.length) {
+                //如果等待时间过了队列还是满的话就直接返回false，添加元素失败
+                if (nanos <= 0L)
+                    return false;
+                //等待设置的时间
+                nanos = notFull.awaitNanos(nanos);
+            }
+            //如果等待时间过了，队列有空间的话就会调用enqueue方法将元素添加到队列
+            enqueue(e);
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    //put方法和offer方法不一样的地方在于，如果队列是满的话，它就会把调用put方法的线程阻塞，直到队列里有空间
+    public void put(E e) throws InterruptedException {
+        Objects.requireNonNull(e);
+        final ReentrantLock lock = this.lock;
+        
+        lock.lockInterruptibly();
+        try {
+            while (count == items.length)
+                //如果队列满的话就阻塞等待
+                notFull.await();
+            enqueue(e);
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    //poll方法用于从队列中取数据，不会阻塞线程
+    public E poll() {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            //这里可以看到如果队列为空的话会直接返回null，否则调用dequeue方法取数据
+            return (count == 0) ? null : dequeue();
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    //增加等待时间的poll方法，和上面offer的重载类似
+    public E poll(long timeout, TimeUnit unit) throws InterruptedException {
+        long nanos = unit.toNanos(timeout);
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            while (count == 0) {
+                if (nanos <= 0L)
+                    return null;
+                nanos = notEmpty.awaitNanos(nanos);
+            }
+            return dequeue();
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    //take方法也是用于取队列中的数据，可能会阻塞当前的线程
+    public E take() throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            //当队列为空时，就会阻塞当前线程
+            while (count == 0)
+                notEmpty.await();
+            //直到队列中有数据了，调用dequeue方法将数据返回
+            return dequeue();
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    //将数据添加到队列中
+    private void enqueue(E x) {
+        // assert lock.getHoldCount() == 1;
+        // assert items[putIndex] == null;
+        final Object[] items = this.items;
+        items[putIndex] = x;
+        //可以看出是通过循环数组实现的队列，当数组满了时下标就变成0了
+        if (++putIndex == items.length) putIndex = 0;
+        count++;
+        //激活因为notEmpty条件而阻塞的线程，比如上面的调用take方法的线程
+        notEmpty.signal();
+    }
+
+    //将数据从队列中取出
+    private E dequeue() {
+        // assert lock.getHoldCount() == 1;
+        // assert items[takeIndex] != null;
+        final Object[] items = this.items;
+        @SuppressWarnings("unchecked")
+        E x = (E) items[takeIndex];
+        //将对应的数组下标位置设置为null释放资源
+        items[takeIndex] = null;
+        if (++takeIndex == items.length) takeIndex = 0;
+        count--;
+        if (itrs != null)
+            itrs.elementDequeued();
+        //激活因为notFull条件而阻塞的线程，比如上面的调用put方法的线程
+        notFull.signal();
+        return x;
+    }
+    
+    //获取队列的元素个数，加了锁，所以结果是准确的
+    public int size() {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            return count;
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+```
+上面就是ArrayBlockingQueue的精简版源码分析，LinkedBlockingQueue原理也类似，不过还是有区别，譬如用了两个锁，用了链表存储数据而不是数组，SynchronousQueue源码差别会更大一点，有时间可以再仔细看看
