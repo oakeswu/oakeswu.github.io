@@ -2,7 +2,7 @@
 layout:     post
 title:      "GC收集器(CMS和G1)"
 subtitle:   ""
-date:       2020-05-18
+date:       2020-05-31
 author:     "OakesWu"
 header-img: "img/post-bg-2015.jpg"
 tags:

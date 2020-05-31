@@ -2,7 +2,7 @@
 layout:     post
 title:      "观察者模式"
 subtitle:   ""
-date:       2020-04-29
+date:       2020-05-30
 author:     "OakesWu"
 header-img: "img/post-bg-2015.jpg"
 tags:
