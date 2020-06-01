@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "zookeeper简介"
+title:      "Zookeeper简介"
 subtitle:   ""
 date:       2020-05-25
 author:     "OakesWu"
