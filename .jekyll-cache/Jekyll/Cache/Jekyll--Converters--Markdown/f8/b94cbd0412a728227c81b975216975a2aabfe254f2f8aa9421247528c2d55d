@@ -1,32 +1,20 @@
----
-layout:     post
-title:      "ThreadPoolExecutor类"
-subtitle:   ""
-date:       2020-05-29
-author:     "OakesWu"
-header-img: "img/post-bg-2015.jpg"
-tags:
-    - Java并发
----
+I"}&<h1 id="背景">背景</h1>
+<p>当我们在项目中创建线程池时，可以用Executors里面封装好的newSingleThreadExecutor，newFixedThreadPool等线程池，但是阿里的java开发规范建议我们自己创建一个线程池，其实我们看Executors里面的线程池底层也依旧是使用的ThreadPoolExecutor类，为什么这么做呢，因为只有在自己new一个ThreadPoolExecutor对象过程中才会知道各个参数的意义，并选择合适的参数构建线程池。ThreadPoolExecutor的关系继承图如下
+<img src="https://upload-images.jianshu.io/upload_images/9082703-648f5597d0de66d6.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="" /></p>
 
-# 背景
-当我们在项目中创建线程池时，可以用Executors里面封装好的newSingleThreadExecutor，newFixedThreadPool等线程池，但是阿里的java开发规范建议我们自己创建一个线程池，其实我们看Executors里面的线程池底层也依旧是使用的ThreadPoolExecutor类，为什么这么做呢，因为只有在自己new一个ThreadPoolExecutor对象过程中才会知道各个参数的意义，并选择合适的参数构建线程池。ThreadPoolExecutor的关系继承图如下
-![](/img/doc/concurrency/concurrency9one.png)
-
-# 源码
-ThreadPoolExecutor是一个内容很多的类，我们先看下他的完整构造函数，了解一个每个参数的含义
-```
-public ThreadPoolExecutor(int corePoolSize,
+<h1 id="源码">源码</h1>
+<p>ThreadPoolExecutor是一个内容很多的类，我们先看下他的完整构造函数，了解一个每个参数的含义</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public ThreadPoolExecutor(int corePoolSize,
                               int maximumPoolSize,
                               long keepAliveTime,
                               TimeUnit unit,
-                              BlockingQueue<Runnable> workQueue,
+                              BlockingQueue&lt;Runnable&gt; workQueue,
                               ThreadFactory threadFactory,
                               RejectedExecutionHandler handler) {
-        if (corePoolSize < 0 ||
-            maximumPoolSize <= 0 ||
-            maximumPoolSize < corePoolSize ||
-            keepAliveTime < 0)
+        if (corePoolSize &lt; 0 ||
+            maximumPoolSize &lt;= 0 ||
+            maximumPoolSize &lt; corePoolSize ||
+            keepAliveTime &lt; 0)
             throw new IllegalArgumentException();
         if (workQueue == null || threadFactory == null || handler == null)
             throw new NullPointerException();
@@ -37,18 +25,19 @@ public ThreadPoolExecutor(int corePoolSize,
         this.threadFactory = threadFactory;
         this.handler = handler;
     }
-```
-- corePoolSize 线程池中核心线程数，核心线程创建了之后就会一直在线程池中，不会因为超时设置而消失
-- maximumPoolSize 线程池中允许的最大线程数量
-- keepAliveTime 超过corePoolSize小于等于maximumPoolSize的线程无任务执行后存活的时间
-- unit keepAliveTime的时间单位，毫秒，秒等
-- workQueue 阻塞队列，用于存放被添加到线程池中尚未执行的任务
-- threadFactory 用于创建具体执行线程
-- handler 拒绝策略，当任务太多来不及处理如何拒绝任务
+</code></pre></div></div>
+<ul>
+  <li>corePoolSize 线程池中核心线程数，核心线程创建了之后就会一直在线程池中，不会因为超时设置而消失</li>
+  <li>maximumPoolSize 线程池中允许的最大线程数量</li>
+  <li>keepAliveTime 超过corePoolSize小于等于maximumPoolSize的线程无任务执行后存活的时间</li>
+  <li>unit keepAliveTime的时间单位，毫秒，秒等</li>
+  <li>workQueue 阻塞队列，用于存放被添加到线程池中尚未执行的任务</li>
+  <li>threadFactory 用于创建具体执行线程</li>
+  <li>handler 拒绝策略，当任务太多来不及处理如何拒绝任务</li>
+</ul>
 
-然后我们看下拒绝策略
-```
-    public static class AbortPolicy implements RejectedExecutionHandler {
+<p>然后我们看下拒绝策略</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    public static class AbortPolicy implements RejectedExecutionHandler {
       
         public AbortPolicy() { }
 
@@ -101,13 +90,12 @@ public ThreadPoolExecutor(int corePoolSize,
             }
         }
     }
-```
-拒绝策略现在就这四种，当然我们也可以自己去实现RejectedExecutionHandler 接口，不过jdk提供的这四种目前足够使用了
+</code></pre></div></div>
+<p>拒绝策略现在就这四种，当然我们也可以自己去实现RejectedExecutionHandler 接口，不过jdk提供的这四种目前足够使用了</p>
 
-# 执行
-我们想看下线程具体到哪里执行的，先看下源码
-```
-    public void execute(Runnable command) {
+<h1 id="执行">执行</h1>
+<p>我们想看下线程具体到哪里执行的，先看下源码</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    public void execute(Runnable command) {
         if (command == null)
             throw new NullPointerException();
         /*
@@ -122,14 +110,14 @@ public ThreadPoolExecutor(int corePoolSize,
          *     那我们知道线程池已经shutodown或者已满拒绝添加任务
          */
         int c = ctl.get();
-        if (workerCountOf(c) < corePoolSize) {
+        if (workerCountOf(c) &lt; corePoolSize) {
             if (addWorker(command, true))
                 return;
             c = ctl.get();
         }
-        if (isRunning(c) && workQueue.offer(command)) {
+        if (isRunning(c) &amp;&amp; workQueue.offer(command)) {
             int recheck = ctl.get();
-            if (! isRunning(recheck) && remove(command))
+            if (! isRunning(recheck) &amp;&amp; remove(command))
                 reject(command);
             else if (workerCountOf(recheck) == 0)
                 addWorker(null, false);
@@ -138,7 +126,7 @@ public ThreadPoolExecutor(int corePoolSize,
             reject(command);
     }
 
-    private final HashSet<Worker> workers = new HashSet<Worker>();
+    private final HashSet&lt;Worker&gt; workers = new HashSet&lt;Worker&gt;();
      
     private boolean addWorker(Runnable firstTask, boolean core) {
         retry:
@@ -147,16 +135,16 @@ public ThreadPoolExecutor(int corePoolSize,
             int rs = runStateOf(c);
 
             // Check if queue empty only if necessary.
-            if (rs >= SHUTDOWN &&
-                ! (rs == SHUTDOWN &&
-                   firstTask == null &&
+            if (rs &gt;= SHUTDOWN &amp;&amp;
+                ! (rs == SHUTDOWN &amp;&amp;
+                   firstTask == null &amp;&amp;
                    ! workQueue.isEmpty()))
                 return false;
 
             for (;;) {
                 int wc = workerCountOf(c);
-                if (wc >= CAPACITY ||
-                    wc >= (core ? corePoolSize : maximumPoolSize))
+                if (wc &gt;= CAPACITY ||
+                    wc &gt;= (core ? corePoolSize : maximumPoolSize))
                     return false;
                 if (compareAndIncrementWorkerCount(c))
                     break retry;
@@ -182,13 +170,13 @@ public ThreadPoolExecutor(int corePoolSize,
                     // shut down before lock acquired.
                     int rs = runStateOf(ctl.get());
 
-                    if (rs < SHUTDOWN ||
-                        (rs == SHUTDOWN && firstTask == null)) {
+                    if (rs &lt; SHUTDOWN ||
+                        (rs == SHUTDOWN &amp;&amp; firstTask == null)) {
                         if (t.isAlive()) // precheck that t is startable
                             throw new IllegalThreadStateException();
                         workers.add(w);
                         int s = workers.size();
-                        if (s > largestPoolSize)
+                        if (s &gt; largestPoolSize)
                             largestPoolSize = s;
                         workerAdded = true;
                     }
@@ -206,19 +194,18 @@ public ThreadPoolExecutor(int corePoolSize,
         }
         return workerStarted;
     }
-```
-上面execute方法就是正式执行Runnable任务的方法，可以看到Runnable任务被封装成了worker并放入了一个HashSet中进行已创建线程的管理。
+</code></pre></div></div>
+<p>上面execute方法就是正式执行Runnable任务的方法，可以看到Runnable任务被封装成了worker并放入了一个HashSet中进行已创建线程的管理。</p>
 
-# 案例
-```
-public class ThreadPoolTest {
+<h1 id="案例">案例</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class ThreadPoolTest {
     private static ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("Test-Thread").build();
-    private static ExecutorService threadPool = new ThreadPoolExecutor(1,5,2, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), threadFactory,  new ThreadPoolExecutor.AbortPolicy());
+    private static ExecutorService threadPool = new ThreadPoolExecutor(1,5,2, TimeUnit.SECONDS, new LinkedBlockingQueue&lt;&gt;(), threadFactory,  new ThreadPoolExecutor.AbortPolicy());
 
     public static void main(String[] args) {
         try {
-            Future future1 = threadPool.submit(() -> System.out.println(Thread.currentThread().getName() + " 执行第一个"));
-            Future future2 = threadPool.submit(() -> System.out.println(Thread.currentThread().getName() + " 执行第二个"));
+            Future future1 = threadPool.submit(() -&gt; System.out.println(Thread.currentThread().getName() + " 执行第一个"));
+            Future future2 = threadPool.submit(() -&gt; System.out.println(Thread.currentThread().getName() + " 执行第二个"));
             finishThreads(future1, future2);
         } catch (Exception e) {
             e.printStackTrace();
@@ -231,5 +218,6 @@ public class ThreadPoolTest {
         }
     }
 }
-```
-我们创建了一个线程池并执行了两个打印任务。
+</code></pre></div></div>
+<p>我们创建了一个线程池并执行了两个打印任务。</p>
+:ET

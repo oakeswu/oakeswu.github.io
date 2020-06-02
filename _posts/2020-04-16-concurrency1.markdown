@@ -14,7 +14,7 @@ tags:
 
 # 并发与并行
 并行是指同时运行，不同于并发的cpu时间切片运行，并行在于多cpu情况下多个cpu同时运行程序，可以参考下Erlang之父 Joe Armstrong的解释图
-![解释图](/img/doc/JoeArmstrong.png)
+![解释图](/img/doc/concurrency/JoeArmstrong.png)
 
 # 为什么使用并发 
 按照上面并发的说法其实可以得出并发只是更好的利用cpu提高效率，所以再考虑使用多线程的时候需要考虑这一点，并且线程上下文切换以及获取锁等操作本身也需要耗时，所以并不是所有情况多线程就比单线程要好。

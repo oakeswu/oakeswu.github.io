@@ -17,14 +17,14 @@ zookeeper是一个分布式系统的分布式协调服务，分布式应用程�
 # 特点
 - zookeeper是通过一个类似于标准文件系统来管理自己的命名空间，注册的节点称为znodes，不同于传统的文件系统用来存储，zookeeper的数据节点会放在内存中，这样可以保持高吞吐和低延迟。并且zookeeper可以保证高性能，高可用性和严格的顺序访问。
 - 组成zookeeper服务的服务器可以通过内存里面的状态快照，日志等可以互相知道对方的的状态，可以保证只要大部分服务器可用，zookeeper服务就可用，当一台server发生故障，zookeeper服务可以将与这台server连接的client连接到其他可用的server上面
-![](https://upload-images.jianshu.io/upload_images/9082703-77ff42a29627f507.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](/img/doc/zookeeper/zookeeper1one.png)
 - zookeeper在读多写少的场景中性能特别好
 
 # 数据模型
 上面提到了znodes，zondes就是zookeeper命名空间中的数据节点的集合，一个数据节点就是一个znode，znode自己也会存储信息，包括状态信息，配置，位置信息等等，并且znode可以包含一个children node。特别注意的是每个znode上面数据的读写都是原子性的。
 zookeeper支持watches配置，当给一个znode配置一个watch时，znode发生改变的时候client端就能接受到改变的信息。这个有点类似于去哪儿的qconfig配置（通过回调函数实现），实现了一个观察者模式
-![](https://upload-images.jianshu.io/upload_images/9082703-662d0fc8757051fb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](/img/doc/zookeeper/zookeeper1two.png)
 
 # 实现
-![](https://upload-images.jianshu.io/upload_images/9082703-94fa32edf2bafa8b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](/img/doc/zookeeper/zookeeper1three.png)
 所有的write请求都被转发到leader server，leader server会转发数据消息到其他follower server。read请求从每个server的本地副本读取数据。

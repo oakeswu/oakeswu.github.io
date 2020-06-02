@@ -1,29 +1,19 @@
----
-layout:     post
-title:      "阻塞队列BlockingQueue"
-subtitle:   ""
-date:       2020-05-25
-author:     "OakesWu"
-header-img: "img/post-bg-2015.jpg"
-tags:
-    - Java并发
----
-
-#前提
+I"�<p>#前提
 说到SynchronousQueue，LinkedBlockingQueue ，ArrayBlockingQueue就不得不先提一下BlockingQueue这个接口，我们先看下BlockingQueue的关系图
-![](/img/doc/concurrency/concurrency8one.png)
+<img src="https://upload-images.jianshu.io/upload_images/9082703-629424f133ab4d9a.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="" />
 然后BlockingQueue有几个方法必须说一下：
-![](/img/doc/concurrency/concurrency8two.png)
-我们看put和take就能知道为啥叫阻塞（Blocking）队列了，就是因为在原始Queue加上了会阻塞等待的put和take方法。
+<img src="https://upload-images.jianshu.io/upload_images/9082703-2f6ecfaf83e22059.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="" />
+我们看put和take就能知道为啥叫阻塞（Blocking）队列了，就是因为在原始Queue加上了会阻塞等待的put和take方法。</p>
 
-# 三者异同
-- SynchronousQueue本身没有容量存储元素，是通过管理提交操作的线程队列来实现阻塞队列的。ArrayBlockingQueue是通过数组来存储元素的队列，并且里面通过一个ReetrantLock和Condition实现线程安全。LinkedBlockingQueue 是通过链表来存储元素的队列，也是通过ReetrantLock和Condition实现的线程安全，但是入队和出队用的是两个不同的ReetrantLock锁。
-- SynchronousQueue最多就是线程入队的一个数据，ArrayBlockingQueue构造函数必须置顶初始化数组容量大小，所以是一个有界队列，LinkedBlockingQueue构造函数可以指定初始化容量大小，如果不指定就是Integer.MaxValue的有界队列
-我们主要分析下ArrayBlockingQueue的源码
+<h1 id="三者异同">三者异同</h1>
+<ul>
+  <li>SynchronousQueue本身没有容量存储元素，是通过管理提交操作的线程队列来实现阻塞队列的。ArrayBlockingQueue是通过数组来存储元素的队列，并且里面通过一个ReetrantLock和Condition实现线程安全。LinkedBlockingQueue 是通过链表来存储元素的队列，也是通过ReetrantLock和Condition实现的线程安全，但是入队和出队用的是两个不同的ReetrantLock锁。</li>
+  <li>SynchronousQueue最多就是线程入队的一个数据，ArrayBlockingQueue构造函数必须置顶初始化数组容量大小，所以是一个有界队列，LinkedBlockingQueue构造函数可以指定初始化容量大小，如果不指定就是Integer.MaxValue的有界队列
+我们主要分析下ArrayBlockingQueue的源码</li>
+</ul>
 
-# ArrayBlockingQueue源码精简版
-```
-public class ArrayBlockingQueue<E> extends AbstractQueue<E> implements BlockingQueue<E>, Serializable {
+<h1 id="arrayblockingqueue源码精简版">ArrayBlockingQueue源码精简版</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class ArrayBlockingQueue&lt;E&gt; extends AbstractQueue&lt;E&gt; implements BlockingQueue&lt;E&gt;, Serializable {
     //存储元素用的数组
     final Object[] items;
     //队首元素的下标
@@ -42,7 +32,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E> implements BlockingQ
         this(capacity, false);
     }
     public ArrayBlockingQueue(int capacity, boolean fair) {
-        if (capacity <= 0)
+        if (capacity &lt;= 0)
             throw new IllegalArgumentException();
         this.items = new Object[capacity];
         lock = new ReentrantLock(fair);
@@ -81,7 +71,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E> implements BlockingQ
         try {
             while (count == items.length) {
                 //如果等待时间过了队列还是满的话就直接返回false，添加元素失败
-                if (nanos <= 0L)
+                if (nanos &lt;= 0L)
                     return false;
                 //等待设置的时间
                 nanos = notFull.awaitNanos(nanos);
@@ -129,7 +119,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E> implements BlockingQ
         lock.lockInterruptibly();
         try {
             while (count == 0) {
-                if (nanos <= 0L)
+                if (nanos &lt;= 0L)
                     return null;
                 nanos = notEmpty.awaitNanos(nanos);
             }
@@ -196,5 +186,6 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E> implements BlockingQ
         }
     }
 }
-```
-上面就是ArrayBlockingQueue的精简版源码分析，LinkedBlockingQueue原理也类似，不过还是有区别，譬如用了两个锁，用了链表存储数据而不是数组，SynchronousQueue源码差别会更大一点，有时间可以再仔细看看
+</code></pre></div></div>
+<p>上面就是ArrayBlockingQueue的精简版源码分析，LinkedBlockingQueue原理也类似，不过还是有区别，譬如用了两个锁，用了链表存储数据而不是数组，SynchronousQueue源码差别会更大一点，有时间可以再仔细看看</p>
+:ET

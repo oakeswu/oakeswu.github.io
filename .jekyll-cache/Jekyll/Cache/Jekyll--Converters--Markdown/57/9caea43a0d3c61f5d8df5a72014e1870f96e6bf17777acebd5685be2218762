@@ -1,23 +1,11 @@
----
-layout:     post
-title:      "Constructor类"
-subtitle:   ""
-date:       2020-05-18
-author:     "OakesWu"
-header-img: "img/post-bg-2015.jpg"
-tags:
-    - Java反射
----
+I"�<h1 id="类图">类图</h1>
+<p>之前我们用反射创建一个类的对象可以通过该Class.newInstance()方法，但是可以发现这个方法只能构造包含无参构造函数的类，如果不包含则会报NoSuchMethodException异常，那么这个时候就需要用到Constructor类了。我们先看看Constructor类的类关系图
+<img src="/img/doc/reflect/reflect4one.png" alt="类图" /></p>
 
-# 类图
-之前我们用反射创建一个类的对象可以通过该Class.newInstance()方法，但是可以发现这个方法只能构造包含无参构造函数的类，如果不包含则会报NoSuchMethodException异常，那么这个时候就需要用到Constructor类了。我们先看看Constructor类的类关系图
-![类图](/img/doc/reflect/reflect4one.png)
-
-# 源码（精简版）
-```
-public final class Constructor<T> extends Executable {
+<h1 id="源码精简版">源码（精简版）</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public final class Constructor&lt;T&gt; extends Executable {
     //用来存储ConstructorAccessor
-    private Constructor<T>      root;
+    private Constructor&lt;T&gt;      root;
     //通过传入参数构造相对应的实例
     public T newInstance(Object ... initargs)
         throws InstantiationException, IllegalAccessException,
@@ -25,11 +13,11 @@ public final class Constructor<T> extends Executable {
     {
         if (!override) {
             if (!Reflection.quickCheckMemberAccess(clazz, modifiers)) {
-                Class<?> caller = Reflection.getCallerClass();
+                Class&lt;?&gt; caller = Reflection.getCallerClass();
                 checkAccess(caller, clazz, null, modifiers);
             }
         }
-        if ((clazz.getModifiers() & Modifier.ENUM) != 0)
+        if ((clazz.getModifiers() &amp; Modifier.ENUM) != 0)
             throw new IllegalArgumentException("Cannot reflectively create enum objects");
         ConstructorAccessor ca = constructorAccessor;   // read volatile
         if (ca == null) {
@@ -70,12 +58,11 @@ public final class Constructor<T> extends Executable {
         }
     }
 }
-```
-由于其他方法基本都是复写的父类等，所以这边就只看了newInstance方法，可以通过reflectionFactory.newConstructorAccessor(this);方法获取不同的ConstructorAccessor并调用newInstance创建一个实例
+</code></pre></div></div>
+<p>由于其他方法基本都是复写的父类等，所以这边就只看了newInstance方法，可以通过reflectionFactory.newConstructorAccessor(this);方法获取不同的ConstructorAccessor并调用newInstance创建一个实例</p>
 
-# 实例
-```
-public class EmployeeDto {
+<h1 id="实例">实例</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class EmployeeDto {
     private int age;
     private String name;
 
@@ -106,7 +93,7 @@ public class EmployeeDto {
     }
 
     public boolean isOlder(int tmpAge) {
-        return age > tmpAge;
+        return age &gt; tmpAge;
     }
 
     @Override
@@ -133,11 +120,11 @@ public class EmployeeConstructorTest {
         }
     }
 }
-```
-EmployeeDto类有一个含参构造函数，然后main方法获取到该构造函数并newInstance创建一个实例并打印构建的对象，我们看看执行结果
-```
-Connected to the target VM, address: '127.0.0.1:65499', transport: 'socket'
+</code></pre></div></div>
+<p>EmployeeDto类有一个含参构造函数，然后main方法获取到该构造函数并newInstance创建一个实例并打印构建的对象，我们看看执行结果</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Connected to the target VM, address: '127.0.0.1:65499', transport: 'socket'
 age:1,name:test
 Disconnected from the target VM, address: '127.0.0.1:65499', transport: 'socket'
-```
-执行没有问题
+</code></pre></div></div>
+<p>执行没有问题</p>
+:ET

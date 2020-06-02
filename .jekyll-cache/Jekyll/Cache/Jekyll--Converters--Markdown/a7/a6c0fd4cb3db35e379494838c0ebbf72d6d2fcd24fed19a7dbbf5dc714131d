@@ -1,4 +1,4 @@
-I"�<h1 id="需求背景">需求背景</h1>
+I"�<h1 id="需求背景">需求背景</h1>
 <p>一个学生对应一个班级号和名称，此时需要统计每个班级的学生</p>
 
 <h1 id="创建数据">创建数据</h1>
@@ -15,16 +15,16 @@ insert into student_test values(1,'小明');
 insert into student_test values(2,'小王');
 </code></pre></div></div>
 <p>造完的数据如图所示：
-<img src="https://upload-images.jianshu.io/upload_images/9082703-d50424a4c4867579.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<img src="/img/doc/hive/hive2one.png" alt="" /></p>
 
 <h1 id="使用">使用</h1>
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>select classno,collect_list(name) from tmp_youdb.student_test group by classno
 </code></pre></div></div>
-<p><img src="https://upload-images.jianshu.io/upload_images/9082703-711f992eaaf57763.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<p><img src="/img/doc/hive/hive2two.png" alt="" /></p>
 
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>select classno,collect_set(name) from tmp_youdb.student_test group by classno
 </code></pre></div></div>
-<p><img src="https://upload-images.jianshu.io/upload_images/9082703-cef8ab4a2a567d2d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<p><img src="/img/doc/hive/hive2three.png" alt="" /></p>
 
 <h1 id="总结">总结</h1>
 <p>从上面可以看出collect_list和collect_set其实就是行转列，需要注意的就是行转列的时候是无序的，如需按照某个字段排序整合，可以使用sort_array</p>

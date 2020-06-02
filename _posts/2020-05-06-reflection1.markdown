@@ -12,7 +12,7 @@ tags:
 # 什么是Class类
 Class类是java.lang包中的类，是java反射中的一个特别重要的类，因为Class类可以获取到类中的方法，字段等信息，等会看下Class类的具体源码
 
-![类关系.png](https://upload-images.jianshu.io/upload_images/9082703-2e4da0e32b4de5af.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![类关系.png](/img/doc/reflect/reflect1one.png)
 
 
 

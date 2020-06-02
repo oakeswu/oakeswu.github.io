@@ -29,7 +29,7 @@ Lucene是目前最先进，最高效的开源搜索引擎框架。ES通过简单
 
 # 基本原理
 -写文档
-![write document](https://upload-images.jianshu.io/upload_images/9082703-9260c8c3be6ffdfd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![write document](/img/doc/es/es1one.png)
 
 1.根据文档ID和routing计算出该存放的分片上并转发请求到该分片
 2.该分片验证请求并将转发请求到其他节点的复制分片上同步数据
@@ -37,7 +37,7 @@ Lucene是目前最先进，最高效的开源搜索引擎框架。ES通过简单
 
 - 读文档
 
-![image.png](https://upload-images.jianshu.io/upload_images/9082703-e082c1c51b1c44f1.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![image.png](/img/doc/es/es1two.png)
 
 1：client查询请求发送到任意节点，接收到的节点会叫协调节点（coordinating node）
 2：协调节点解析查询请求，向其他关联分片转发请求，一个主分片和它的复制分片任意选择

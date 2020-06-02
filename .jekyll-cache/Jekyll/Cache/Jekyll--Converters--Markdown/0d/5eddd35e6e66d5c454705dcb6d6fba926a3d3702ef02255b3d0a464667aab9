@@ -1,0 +1,401 @@
+I"�X<h1 id="什么是class类">什么是Class类</h1>
+<p>Class类是java.lang包中的类，是java反射中的一个特别重要的类，因为Class类可以获取到类中的方法，字段等信息，等会看下Class类的具体源码</p>
+
+<p><img src="/img/doc/reflect/reflect1one.png" alt="类关系.png" /></p>
+
+<h1 id="class类源码精简">Class类源码（精简）</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public final class Class&lt;T&gt; implements java.io.Serializable, GenericDeclaration, Type, AnnotatedElement {
+    private volatile transient Constructor&lt;T&gt; cachedConstructor;
+    private volatile transient Class&lt;?&gt;       newInstanceCallerCache;
+
+    //class的构造函数 
+    private Class(ClassLoader loader) {
+        // Initialize final field for classLoader.  The initialization value of non-null
+        // prevents future JIT optimizations from assuming this final field is null.
+        classLoader = loader;
+    }
+  
+    @CallerSensitive
+    public static Class&lt;?&gt; forName(String className)  throws ClassNotFoundException {
+        Class&lt;?&gt; caller = Reflection.getCallerClass();
+        return forName0(className, true, ClassLoader.getClassLoader(caller), caller);
+    }
+
+    @CallerSensitive
+    public static Class&lt;?&gt; forName(String name, boolean initialize,  ClassLoader loader)
+        throws ClassNotFoundException
+    {
+        Class&lt;?&gt; caller = null;
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            // Reflective call to get caller class is only needed if a security manager
+            // is present.  Avoid the overhead of making this call otherwise.
+            caller = Reflection.getCallerClass();
+            if (sun.misc.VM.isSystemDomainLoader(loader)) {
+                ClassLoader ccl = ClassLoader.getClassLoader(caller);
+                if (!sun.misc.VM.isSystemDomainLoader(ccl)) {
+                    sm.checkPermission(
+                        SecurityConstants.GET_CLASSLOADER_PERMISSION);
+                }
+            }
+        }
+        return forName0(name, initialize, loader, caller);
+    }
+
+    /** Called after security check for system loader access checks have been made. */
+    private static native Class&lt;?&gt; forName0(String name, boolean initialize, ClassLoader loader, Class&lt;?&gt; caller) throws ClassNotFoundException;
+
+    @CallerSensitive
+    public T newInstance()
+        throws InstantiationException, IllegalAccessException
+    {
+        if (System.getSecurityManager() != null) {
+            checkMemberAccess(Member.PUBLIC, Reflection.getCallerClass(), false);
+        }
+
+        // NOTE: the following code may not be strictly correct under
+        // the current Java memory model.
+
+        // Constructor lookup
+        if (cachedConstructor == null) {
+            if (this == Class.class) {
+                throw new IllegalAccessException(
+                    "Can not call newInstance() on the Class for java.lang.Class"
+                );
+            }
+            try {
+                Class&lt;?&gt;[] empty = {};
+                final Constructor&lt;T&gt; c = getConstructor0(empty, Member.DECLARED);
+                // Disable accessibility checks on the constructor
+                // since we have to do the security check here anyway
+                // (the stack depth is wrong for the Constructor's
+                // security check to work)
+                java.security.AccessController.doPrivileged(
+                    new java.security.PrivilegedAction&lt;Void&gt;() {
+                        public Void run() {
+                                c.setAccessible(true);
+                                return null;
+                            }
+                        });
+                cachedConstructor = c;
+            } catch (NoSuchMethodException e) {
+                throw (InstantiationException)
+                    new InstantiationException(getName()).initCause(e);
+            }
+        }
+        Constructor&lt;T&gt; tmpConstructor = cachedConstructor;
+        // Security check (same as in java.lang.reflect.Constructor)
+        int modifiers = tmpConstructor.getModifiers();
+        if (!Reflection.quickCheckMemberAccess(this, modifiers)) {
+            Class&lt;?&gt; caller = Reflection.getCallerClass();
+            if (newInstanceCallerCache != caller) {
+                Reflection.ensureMemberAccess(caller, this, null, modifiers);
+                newInstanceCallerCache = caller;
+            }
+        }
+        // Run constructor
+        try {
+            return tmpConstructor.newInstance((Object[])null);
+        } catch (InvocationTargetException e) {
+            Unsafe.getUnsafe().throwException(e.getTargetException());
+            // Not reached
+            return null;
+        }
+    }
+    
+    // 入参是否是当前类的对象
+    public native boolean isInstance(Object obj);
+    // 入参是否是当前类的超类或相同类
+    public native boolean isAssignableFrom(Class&lt;?&gt; cls);
+    //当前类是否是接口
+    public native boolean isInterface();
+    //当前类是否是数组
+    public native boolean isArray();
+    //当前类是否是基本数据类型
+    public native boolean isPrimitive();
+    //当前类是否是注解
+    public boolean isAnnotation() {
+        return (getModifiers() &amp; ANNOTATION) != 0;
+    }
+    //当前类是否jvm自己生成类
+    public boolean isSynthetic() {
+        return (getModifiers() &amp; SYNTHETIC) != 0;
+    }
+    //获取当前类的类加载器
+    @CallerSensitive
+    public ClassLoader getClassLoader() {
+        ClassLoader cl = getClassLoader0();
+        if (cl == null)
+            return null;
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            ClassLoader.checkClassLoaderPermission(cl, Reflection.getCallerClass());
+        }
+        return cl;
+    }
+    // Package-private to allow ClassLoader access
+    ClassLoader getClassLoader0() { return classLoader; }
+    // Initialized in JVM not by private constructo
+    private final ClassLoader classLoader;
+
+    //返回泛型类中的泛型参数数组
+    public TypeVariable&lt;Class&lt;T&gt;&gt;[] getTypeParameters() {
+        ClassRepository info = getGenericInfo();
+        if (info != null)
+            return (TypeVariable&lt;Class&lt;T&gt;&gt;[])info.getTypeParameters();
+        else
+            return (TypeVariable&lt;Class&lt;T&gt;&gt;[])new TypeVariable&lt;?&gt;[0];
+    }
+
+    //获取当前类的超类
+    public native Class&lt;? super T&gt; getSuperclass();
+    //获取当前类的直接超类
+    public Type getGenericSuperclass() {
+        ClassRepository info = getGenericInfo();
+        if (info == null) {
+            return getSuperclass();
+        }
+
+        // Historical irregularity:
+        // Generic signature marks interfaces with superclass = Object
+        // but this API returns null for interfaces
+        if (isInterface()) {
+            return null;
+        }
+
+        return info.getSuperclass();
+    }
+
+    //获取当前类实现的接口数组
+    public Class&lt;?&gt;[] getInterfaces() {
+        ReflectionData&lt;T&gt; rd = reflectionData();
+        if (rd == null) {
+            // no cloning required
+            return getInterfaces0();
+        } else {
+            Class&lt;?&gt;[] interfaces = rd.interfaces;
+            if (interfaces == null) {
+                interfaces = getInterfaces0();
+                rd.interfaces = interfaces;
+            }
+            // defensively copy before handing over to user code
+            return interfaces.clone();
+        }
+    }
+
+    private native Class&lt;?&gt;[] getInterfaces0();
+    //获取当前类直接实现的接口数组
+    public Type[] getGenericInterfaces() {
+        ClassRepository info = getGenericInfo();
+        return (info == null) ?  getInterfaces() : info.getSuperInterfaces();
+    }
+
+    //获取当前数组的元素类型
+    public native Class&lt;?&gt; getComponentType();
+    //获取当前类的修饰符
+    public native int getModifiers();
+    //获取当前类的签名
+    public native Object[] getSigners();
+    
+    //获取当前类的类名
+    public String getSimpleName() {
+        if (isArray())
+            return getComponentType().getSimpleName()+"[]";
+
+        String simpleName = getSimpleBinaryName();
+        if (simpleName == null) { // top level class
+            simpleName = getName();
+            return simpleName.substring(simpleName.lastIndexOf(".")+1); // strip the package name
+        }
+        int length = simpleName.length();
+        if (length &lt; 1 || simpleName.charAt(0) != '$')
+            throw new InternalError("Malformed class name");
+        int index = 1;
+        while (index &lt; length &amp;&amp; isAsciiDigit(simpleName.charAt(index)))
+            index++;
+        return simpleName.substring(index);
+    }
+
+    //获取当前public修饰的内部类和接口
+    public Class&lt;?&gt;[] getClasses() {
+        checkMemberAccess(Member.PUBLIC, Reflection.getCallerClass(), false);
+        return java.security.AccessController.doPrivileged(
+            new java.security.PrivilegedAction&lt;Class&lt;?&gt;[]&gt;() {
+                public Class&lt;?&gt;[] run() {
+                    List&lt;Class&lt;?&gt;&gt; list = new ArrayList&lt;&gt;();
+                    Class&lt;?&gt; currentClass = Class.this;
+                    while (currentClass != null) {
+                        Class&lt;?&gt;[] members = currentClass.getDeclaredClasses();
+                        for (int i = 0; i &lt; members.length; i++) {
+                            if (Modifier.isPublic(members[i].getModifiers())) {
+                                list.add(members[i]);
+                            }
+                        }
+                        currentClass = currentClass.getSuperclass();
+                    }
+                    return list.toArray(new Class&lt;?&gt;[0]);
+                }
+            });
+    }
+    //获取当前类所有内部类和接口，不过排除直接继承
+    public Class&lt;?&gt;[] getDeclaredClasses() throws SecurityException {
+        checkMemberAccess(Member.DECLARED, Reflection.getCallerClass(), false);
+        return getDeclaredClasses0();
+    }
+
+    //获取当前类中public修饰的字段
+    public Field[] getFields() throws SecurityException {
+        checkMemberAccess(Member.PUBLIC, Reflection.getCallerClass(), true);
+        return copyFields(privateGetPublicFields(null));
+    }
+    //获取指定名称的方法
+    public Field getField(String name)
+        throws NoSuchFieldException, SecurityException {
+        checkMemberAccess(Member.PUBLIC, Reflection.getCallerClass(), true);
+        Field field = getField0(name);
+        if (field == null) {
+            throw new NoSuchFieldException(name);
+        }
+        return field;
+    }
+    //获取所有声明的字段
+    public Field[] getDeclaredFields() throws SecurityException {
+        checkMemberAccess(Member.DECLARED, Reflection.getCallerClass(), true);
+        return copyFields(privateGetDeclaredFields(false));
+    }
+
+    //获取public修饰的方法
+    public Method[] getMethods() throws SecurityException {
+        checkMemberAccess(Member.PUBLIC, Reflection.getCallerClass(), true);
+        return copyMethods(privateGetPublicMethods());
+    }
+    //获取指定传参类型和名称的方法
+    public Method getMethod(String name, Class&lt;?&gt;... parameterTypes)
+        throws NoSuchMethodException, SecurityException {
+        checkMemberAccess(Member.PUBLIC, Reflection.getCallerClass(), true);
+        Method method = getMethod0(name, parameterTypes, true);
+        if (method == null) {
+            throw new NoSuchMethodException(getName() + "." + name + argumentTypesToString(parameterTypes));
+        }
+        return method;
+    }
+    //获取所有声明的类
+    public Class&lt;?&gt;[] getDeclaredClasses() throws SecurityException {
+        checkMemberAccess(Member.DECLARED, Reflection.getCallerClass(), false);
+        return getDeclaredClasses0();
+    }
+  
+    //获取public修饰的构造器
+    public Constructor&lt;?&gt;[] getConstructors() throws SecurityException {
+        checkMemberAccess(Member.PUBLIC, Reflection.getCallerClass(), true);
+        return copyConstructors(privateGetDeclaredConstructors(true));
+    }
+    //获取传参的构造器
+    public Constructor&lt;T&gt; getConstructor(Class&lt;?&gt;... parameterTypes)
+        throws NoSuchMethodException, SecurityException {
+        checkMemberAccess(Member.PUBLIC, Reflection.getCallerClass(), true);
+        return getConstructor0(parameterTypes, Member.PUBLIC);
+    }
+    //获取所有声明的构造器
+    public Constructor&lt;?&gt;[] getDeclaredConstructors() throws SecurityException {
+        checkMemberAccess(Member.DECLARED, Reflection.getCallerClass(), true);
+        return copyConstructors(privateGetDeclaredConstructors(false));
+    }
+}
+</code></pre></div></div>
+<h1 id="例子">例子</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">package</span> <span class="n">reflect</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="n">class</span> <span class="n">EmployeeDto</span> <span class="p">{</span>
+    <span class="n">private</span> <span class="n">int</span> <span class="n">age</span><span class="p">;</span>
+    <span class="n">private</span> <span class="k">String</span> <span class="n">name</span><span class="p">;</span>
+
+    <span class="n">EmployeeDto</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">this</span><span class="p">.</span><span class="n">age</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+        <span class="n">this</span><span class="p">.</span><span class="n">name</span> <span class="p">=</span> <span class="s2">"default"</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">EmployeeDto</span><span class="p">(</span><span class="n">int</span> <span class="n">age</span><span class="p">,</span> <span class="k">String</span> <span class="n">name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">this</span><span class="p">.</span><span class="n">age</span> <span class="p">=</span> <span class="n">age</span><span class="p">;</span>
+        <span class="n">this</span><span class="p">.</span><span class="n">name</span> <span class="p">=</span> <span class="n">name</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="n">int</span> <span class="n">getAge</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">return</span> <span class="n">age</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="n">void</span> <span class="n">setAge</span><span class="p">(</span><span class="n">int</span> <span class="n">age</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">this</span><span class="p">.</span><span class="n">age</span> <span class="p">=</span> <span class="n">age</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">String</span> <span class="n">getName</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">return</span> <span class="n">name</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="n">void</span> <span class="n">setName</span><span class="p">(</span><span class="k">String</span> <span class="n">name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">this</span><span class="p">.</span><span class="n">name</span> <span class="p">=</span> <span class="n">name</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">boolean</span> <span class="n">isOlder</span><span class="p">(</span><span class="n">int</span> <span class="n">tmpAge</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">return</span> <span class="n">age</span> <span class="p">&gt;</span> <span class="n">tmpAge</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="p">@</span><span class="n">Override</span>
+    <span class="k">public</span> <span class="k">String</span> <span class="n">toString</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">return</span> <span class="s2">"age:"</span> <span class="p">+</span> <span class="n">age</span> <span class="p">+</span> <span class="s2">",name:"</span> <span class="p">+</span> <span class="n">name</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">package</span> <span class="n">reflect</span><span class="p">;</span>
+
+<span class="n">import</span> <span class="n">java</span><span class="p">.</span><span class="n">lang</span><span class="p">.</span><span class="n">reflect</span><span class="p">.</span><span class="n">Field</span><span class="p">;</span>
+<span class="n">import</span> <span class="n">java</span><span class="p">.</span><span class="n">lang</span><span class="p">.</span><span class="n">reflect</span><span class="p">.</span><span class="n">Method</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="n">class</span> <span class="n">EmployeeDtoReflect</span> <span class="p">{</span>
+
+    <span class="k">public</span> <span class="n">void</span> <span class="n">test</span><span class="p">(</span><span class="n">Class</span><span class="p">&lt;?&gt;</span> <span class="n">clazz</span><span class="p">)</span> <span class="n">throws</span> <span class="n">Exception</span><span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">clazz</span><span class="p">.</span><span class="n">isInstance</span><span class="p">(</span><span class="n">new</span> <span class="n">EmployeeDto</span><span class="p">()))</span> <span class="p">{</span>
+            <span class="n">EmployeeDto</span> <span class="n">employee</span> <span class="p">=</span> <span class="p">(</span><span class="n">EmployeeDto</span><span class="p">)</span> <span class="n">clazz</span><span class="p">.</span><span class="n">newInstance</span><span class="p">();</span>
+            <span class="nf">System</span><span class="p">.</span><span class="n">out</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s2">"EmployeeDeo:"</span> <span class="p">+</span> <span class="n">employee</span><span class="p">);</span>
+            <span class="n">Method</span><span class="p">[]</span> <span class="n">methods</span> <span class="p">=</span> <span class="n">clazz</span><span class="p">.</span><span class="n">getDeclaredMethods</span><span class="p">();</span>
+            <span class="n">for</span><span class="p">(</span><span class="n">Method</span> <span class="n">method</span> <span class="p">:</span> <span class="n">methods</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nf">System</span><span class="p">.</span><span class="n">out</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s2">"Method:"</span> <span class="p">+</span> <span class="n">method</span><span class="p">.</span><span class="n">getName</span><span class="p">());</span>
+            <span class="p">}</span>
+            <span class="n">Field</span><span class="p">[]</span> <span class="n">fileds</span> <span class="p">=</span> <span class="n">clazz</span><span class="p">.</span><span class="n">getDeclaredFields</span><span class="p">();</span>
+            <span class="n">for</span> <span class="p">(</span><span class="n">Field</span> <span class="n">field</span> <span class="p">:</span> <span class="n">fileds</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nf">System</span><span class="p">.</span><span class="n">out</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s2">"Fields:"</span> <span class="p">+</span> <span class="n">field</span><span class="p">.</span><span class="n">getName</span><span class="p">());</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="n">static</span> <span class="n">void</span> <span class="n">main</span><span class="p">(</span><span class="k">String</span><span class="p">[]</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">try</span> <span class="p">{</span>
+            <span class="n">new</span> <span class="n">EmployeeDtoReflect</span><span class="p">().</span><span class="n">test</span><span class="p">(</span><span class="n">EmployeeDto</span><span class="p">.</span><span class="n">class</span><span class="p">);</span>
+        <span class="p">}</span> <span class="n">catch</span> <span class="p">(</span><span class="n">Exception</span> <span class="n">e</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">e</span><span class="p">.</span><span class="n">printStackTrace</span><span class="p">();</span>
+        <span class="p">}</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>我们可以看下执行结果</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Connected to the target VM, address: '127.0.0.1:54290', transport: 'socket'
+Disconnected from the target VM, address: '127.0.0.1:54290', transport: 'socket'
+EmployeeDeo:age:0,name:default
+Method:toString
+Method:getName
+Method:setName
+Method:setAge
+Method:isOlder
+Method:getAge
+Fields:age
+Fields:name
+
+Process finished with exit code 0
+</code></pre></div></div>
+<h1 id="总结">总结</h1>
+<ul>
+  <li>上面测试代码只测试了newInstance()方法，getDeclaredMethods()和getDeclaredFields()方法. 测试代码通过类.class获取Class类，我们也阔以通过Class.forName(“类路径”)获取，这个在获取具体数据库驱动时常用到。</li>
+  <li>Class类是Java反射中基础的一个类，因为它能获取到一个类中的变量，方法，构造函数等，像spring等开源框架中大量使用了反射，但是反射的效率一般，并且有可能破坏java中访问修饰符的访问权限控制</li>
+</ul>
+:ET
