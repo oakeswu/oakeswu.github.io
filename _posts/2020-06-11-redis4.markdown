@@ -1,0 +1,26 @@
+---
+layout:     post
+title:      "Redis性能"
+subtitle:   ""
+date:       2020-06-11
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Redis
+---
+
+# 单线程还是多线程
+在很多时候我们能听到Redis是单进程单线程模型，但是实际上Redis的部分功能是多线程的，在重要的网络请求模块是单线程，我们可以看下官方文档的描述[FAQ](https://redis.io/topics/faq)
+**However with Redis 4.0 we started to make Redis more threaded. For now this is limited to deleting objects in the background, and to blocking commands implemented via Redis modules.** For future releases, the plan is to make Redis more and more threaded.
+我们可以看到在Redis 4.0之后后台删除对象，实现Redis模型的阻塞命令是多线程处理的，但是网络通信依然是单线程，从而保证了数据操作线程安全，最新的Redis 6.0引入了多线程，但是目前仍没有大面积应用，估计会等一段时间的测试和验证
+
+# I/O多路复用
+我们上面提到Redis 6.0之前的网络IO是单线程的，单线程代表着顺序执行，有一种情况是当一个信号过来取数据时，当Redis当中没有数据返回，此时就阻塞等待直到数据写入然后返回，这个有点类似于Java阻塞队列中的SynchronousQueue。这样的话读写效率会很低，所以Redis采用了I/O多路复用的模型，就是我单线程中同时监测多个IO信号，如果某个IO信号有数据就直接返回，如图所示（参考[Multiplexing](https://en.wikipedia.org/wiki/Multiplexing)，[Redis 和 I/O 多路复用](https://zhuanlan.zhihu.com/p/24252862)，[IO多路复用](https://www.zhihu.com/question/32163005)）
+![Multiplexing](/img/doc/redis/redis4one.png)
+
+# Redis访问速度
+很多人会说Redis的网络通信是单线程的，为啥访问很快，我们可以根据官方文档描述找到答案。
+1：Redis的数据访问等都是在内存中完成的，而内存的访问速度会比磁盘，数据库访问快上很多。
+2：Redis的数据结构简单，操作的内部复杂性少
+3：I/O多路复用模型提高访问效率
+4：单线程避免了不必要的上下文切换和竞争条件
