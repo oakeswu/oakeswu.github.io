@@ -2,7 +2,7 @@
 layout:     post
 title:      "synchronized和volatile原理"
 subtitle:   ""
-date:       2020-06-09
+date:       2020-06-11
 author:     "OakesWu"
 header-img: "img/post-bg-2015.jpg"
 tags:
