@@ -1,8 +1,8 @@
 ---
 layout:     post
-title:      "Runnable和Thread简析"
+title:      "Java并发(三) -- Runnable和Thread简析"
 subtitle:   ""
-date:       2020-04-24
+date:       2020-04-25
 author:     "OakesWu"
 header-img: "img/post-bg-2015.jpg"
 tags:

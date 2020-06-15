@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "两个线程交替打印数字"
+title:      "Java并发(七) -- 两个线程交替打印数字"
 subtitle:   ""
 date:       2020-05-25
 author:     "OakesWu"

@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "阻塞队列BlockingQueue"
+title:      "Java并发(八) -- 阻塞队列BlockingQueue"
 subtitle:   ""
 date:       2020-05-25
 author:     "OakesWu"

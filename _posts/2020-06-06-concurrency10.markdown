@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "CAS思想"
+title:      "Java并发(十) -- CAS思想"
 subtitle:   ""
 date:       2020-06-06
 author:     "OakesWu"

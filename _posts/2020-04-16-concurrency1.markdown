@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "初识并发"
+title:      "Java并发(一) -- 初识并发"
 subtitle:   ""
 date:       2020-04-16
 author:     "OakesWu"

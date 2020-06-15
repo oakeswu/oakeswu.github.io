@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "List和Map的并发测试"
+title:      "Java并发(十一) -- List和Map的并发测试"
 subtitle:   ""
 date:       2020-06-09
 author:     "OakesWu"
@@ -159,7 +159,7 @@ public class CopyOnWriteArrayList<E>
     implements List<E>, RandomAccess, Cloneable, java.io.Serializable {
     
     public boolean add(E e) {
-        //乐观锁
+        //可重入锁
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {

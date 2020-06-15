@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "synchronized和volatile原理"
+title:      "Java并发(十二) -- synchronized和volatile底层原理"
 subtitle:   ""
 date:       2020-06-11
 author:     "OakesWu"
@@ -12,7 +12,7 @@ tags:
 **本文主要参考Java并发编程的艺术，IA-32架构软件开发人员手册并基于JDK1.8**
 
 # 背景
-我们在之前的文章中多次用到了volatile和synchronized，volatile可以保证可见性，有序性，但是不能保证原子性，所以线程中如果包含volatile共享变量的非原子性操作就可能存在并发风险，此时有时候我们看到会使用到synchronized锁，所以我们探究下volatile是如何保证可见性和有序性， synchronized是如何实现锁机制的。
+我们在之前的文章中多次用到了volatile和synchronized，volatile可以保证可见性，有序性，但是不能保证原子性，所以线程中如果包含volatile共享变量的非原子性操作就可能存在并发风险，此时可以考虑使用synchronized锁，所以我们探究下volatile是如何保证可见性和有序性， synchronized是如何实现锁机制的。
 
 # volatile
 - 可见性
@@ -22,7 +22,7 @@ tags:
 3：线程开始前Data1和Data2都是同步的主内存中的数据，所以Data1的数据跟Data2的数据相同
 4：线程A开始执行并修改Cache1中的Data1数据，然后更新到主内存中
 5：线程B开始执行并修改Cache2中的Data2数据，Data2数据同步到主内存中，此时覆盖了Data1的数据
-那么这时候加上volatile可以避免这种情况发生，当第四步Data1同步到主内存中时就会让Cache2中的Data2失效并从新拉取主内存数据，保证Data2数据与主内存最新数据一致。我们看下volatile如何实现的
+那么这时候加上volatile可以避免这种情况发生，当第四步Data1同步到主内存中时就会让Cache2中的Data2失效并重新拉取主内存数据，保证Data2数据与主内存最新数据一致。我们看下volatile如何实现的
 ```
 public class VolatileTest {
 

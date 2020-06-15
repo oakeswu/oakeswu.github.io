@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "GC回收算法"
+title:      "JVM(四) -- GC回收算法"
 subtitle:   ""
 date:       2020-05-18
 author:     "OakesWu"
