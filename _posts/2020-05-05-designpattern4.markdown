@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Builder模式"
+title:      "设计模式(四) -- Builder模式"
 subtitle:   ""
 date:       2020-05-05
 author:     "OakesWu"

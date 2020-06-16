@@ -1,0 +1,103 @@
+I"<h1 id="背景">背景</h1>
+<p>之前负责过部门老的搜索项目，当时JVM的参数会读取项目中的配置，所以生产发生过频繁GC的问题，之前只能帮助排查问题，随着学习的深入，决定总结一下JVM的一些工具和命令</p>
+
+<h1 id="参数">参数</h1>
+<p>-Xmx 堆的最小空间
+-Xms 堆的最大空间
+-Xmn 年轻代大小
+-Xss 线程的堆栈大小
+-XX:SurvivorRatio	Eden区与Survivor区的比值
+-XX:NewRatio	年轻代与老年代的比值
+-XX:+UseConcMarkSweepGC 使用CMS收集器
+-XX:+UseParNewGC 设置年轻代为并行收集
+-XX:+UseG1GC 使用G1收集器
+-XX:+PrintGC 打印GC日志
+-XX:+PrintGCDetails 打印GC详细日志</p>
+
+<h1 id="工具">工具</h1>
+<ul>
+  <li>
+    <p>visualvm 提供了简单查看堆使用和配置的能力，并已集成在JDK的bin中，双击运行jvisualvm.exe即可进入图形页面
+<img src="https://upload-images.jianshu.io/upload_images/9082703-56af3500bcd7eede.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="jvisualvm " />
+里面<strong>概述</strong>可以看到JVM参数，<strong>监视</strong>如图所示可以看到队，CPU等使用情况，<strong>线程</strong>可以看到线程运行状况。优点就是很方便，缺点在于无法看到更深入的信息</p>
+  </li>
+  <li>jps（jvm process status tool） 通过jps或者jps -l命令可以打印出所有jvm进程id和进程启动路径，
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jps -l
+42133 sun.tools.jps.Jps
+38 org.apache.catalina.startup.Bootstrap
+</code></pre></div>    </div>
+    <p>38就是应用的进程id</p>
+  </li>
+  <li>jinfo 通过jinfo pid可以查看到进程环境信息和运行参数或者jinfo -flags 38只查看运行参数，jinfo作用可以实时的查看和调整虚拟机各项参数。
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jinfo -flags 38
+VM Flags:
+Non-default VM flags: -XX:CICompilerCount=2 -XX:CompressedClassSpaceSize=260046848 -XX:ConcGCThreads=2 -XX:G1HeapRegionSize=1048576 -XX:GCLogFileSize=33554432 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=null -XX:InitialHeapSize=784334848 -XX:+ManagementServer -XX:MarkStackSize=4194304 -XX:MaxGCPauseMillis=200 -XX:MaxHeapFreeRatio=50 -XX:MaxHeapSize=1308622848 -XX:MaxMetaspaceSize=268435456 -XX:MaxNewSize=784334848 -XX:MetaspaceSize=134217728 -XX:MinHeapDeltaBytes=1048576 -XX:MinHeapFreeRatio=30 -XX:NumberOfGCLogFiles=5 -XX:-OmitStackTraceInFastThrow -XX:ParallelGCThreads=2 -XX:+PreserveFramePointer -XX:+PrintGC -XX:+PrintGCDateStamps -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:ThreadStackSize=256 -XX:+UseCompressedClassPointers -XX:+UseCompressedOops -XX:+UseFastUnorderedTimeStamps -XX:+UseG1GC -XX:+UseGCLogFileRotation 
+</code></pre></div>    </div>
+  </li>
+  <li>jstat 通过jstat -gcutil pid 1000 10可以每隔1000ms打印10次堆的情况。可以显示出虚拟机进程中的类装载，内存，垃圾收集，JIT编译等运行数据。
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jstat -gcutil 38 1000 10
+S0     S1     E      O      M     CCS    YGC     YGCT    FGC    FGCT     GCT   
+0.00 100.00  18.97  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  19.23  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  19.23  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  19.49  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  19.49  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  20.26  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  20.26  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  22.82  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  22.82  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+0.00 100.00  23.08  80.29  96.61  93.61    590   14.323     0    0.000   14.323
+</code></pre></div>    </div>
+  </li>
+  <li>jstack 打印出JVM线程的状态</li>
+  <li>jmap 通过jmap -heap pid也可以打印出堆的使用情况
+```
+jmap -heap 38
+Garbage-First (G1) GC with 2 thread(s)</li>
+</ul>
+
+<p>Heap Configuration:
+   MinHeapFreeRatio         = 30
+   MaxHeapFreeRatio         = 50
+   MaxHeapSize              = 1308622848 (1248.0MB)
+   NewSize                  = 1363144 (1.2999954223632812MB)
+   MaxNewSize               = 784334848 (748.0MB)
+   OldSize                  = 5452592 (5.1999969482421875MB)
+   NewRatio                 = 2
+   SurvivorRatio            = 8
+   MetaspaceSize            = 134217728 (128.0MB)
+   CompressedClassSpaceSize = 260046848 (248.0MB)
+   MaxMetaspaceSize         = 268435456 (256.0MB)
+   G1HeapRegionSize         = 1048576 (1.0MB)</p>
+
+<p>Heap Usage:
+G1 Heap:
+   regions  = 1248
+   capacity = 1308622848 (1248.0MB)
+   used     = 559231344 (533.3245697021484MB)
+   free     = 749391504 (714.6754302978516MB)
+   42.734340521005485% used
+G1 Young Generation:
+Eden Space:
+   regions  = 229
+   capacity = 403701760 (385.0MB)
+   used     = 240123904 (229.0MB)
+   free     = 163577856 (156.0MB)
+   59.48051948051948% used
+Survivor Space:
+   regions  = 14
+   capacity = 14680064 (14.0MB)
+   used     = 14680064 (14.0MB)
+   free     = 0 (0.0MB)
+   100.0% used
+G1 Old Generation:
+   regions  = 304
+   capacity = 365953024 (349.0MB)
+   used     = 303378800 (289.32456970214844MB)
+   free     = 62574224 (59.67543029785156MB)
+   82.90102283729182% used</p>
+
+<p>45296 interned Strings occupying 5894320 bytes.
+```
+我们从上面打印的信息也能看出来当前JVM使用了G1回收器</p>
+:ET

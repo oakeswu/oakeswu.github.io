@@ -1,0 +1,56 @@
+I"�<p><strong>本文参考Redi官网<a href="https://redis.io/topics/data-types-intro#strings">An introduction to Redis data types and abstractions</a></strong>
+我们一般使用Redis存储数据都会存储成String类型数据，但其实Redis提供了好几种数据结构（String，List，Set, Sorted Set, Hashes, Bit arrays, HyperLogLogs），但是我们就主要讲前面五个常用到的数据结构</p>
+<h1 id="string">String</h1>
+<p>Redis的字符串是二进制安全的，就可以理解成Redis的字符串可以包含任意类型的数据，因为像图片，视频等信息可以转成二进制类型的数据可以安全的进行转换没有任何风险。
+String主要就是执行Set Key Value，Get Key命令</p>
+
+<h1 id="list">List</h1>
+<p>Redis是基于LinkedLIst实现的，</p>
+<ul>
+  <li>LPUSH命令在List左边即头部添加一个元素</li>
+  <li>LPOP命令会弹出最左边的元素</li>
+  <li>BLPOP阻塞访问最左边的元素</li>
+  <li>RPUSH命令在List右边即尾部添加一个元素</li>
+  <li>RPOP命令会弹出最右边的元素</li>
+  <li>BRPOP阻塞访问最右边的元素</li>
+  <li>LRANGE命令可以取出列表里面一部分的数据
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>LPUSH mylist a   # now the list is "a"
+LPUSH mylist b   # now the list is "b","a"
+RPUSH mylist c   # now the list is "b","a","c"
+RPUSH mylist d   # now the list is "b","a","c","d"
+LPOP mulist 输出b
+RPOP mylist 输出d
+LRANGE mylist 0 -1 输出a,c
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<h1 id="set">Set</h1>
+<p>Set与List的区别主要就是Set不会出现重复数据的问题，通过哈希表实现的，所以添加，删除，查找的复杂度都是 O(1)</p>
+<ul>
+  <li>SADD key member1 member2… 把新的元素添加到Set里面</li>
+  <li>SCARD key 获取Set的集合数</li>
+  <li>SMEMBERS key 遍历Set</li>
+  <li>SPOP key 移除并返回集合中的一个随机元素</li>
+</ul>
+
+<h1 id="sorted-set">Sorted Set</h1>
+<p>sorted Set和Se一致，区别在于sorted Set每个元素都会关联一个double类型的分数，然后通过该分数进行从小到大的排序</p>
+<ul>
+  <li>ZADD key score1 member1 score2 member2…增加一个或多个元素</li>
+  <li>ZCARD key 获取有序集合的成员数</li>
+  <li>ZRANGE key start stop withscores 返回有序集合指定区间内的成员</li>
+  <li>ZRANK key member 返回有序集合中指定成员的索引</li>
+</ul>
+
+<h1 id="hashes">Hashes</h1>
+<p>Hashes是字符串字段和字符串值之间的映射，Hash便于表示objects。</p>
+<ul>
+  <li>HSet key field value 将哈希表key中的字段field的值设为value</li>
+  <li>HMSET key field1 value1 field2 vlaue2… 同时将多个field-value设置到Hashes里面</li>
+  <li>HGET key field 获取哈希表中指定字段的值</li>
+  <li>HMGET key field1 field2…获取所有给定字段的值</li>
+  <li>HGETALL key 获取key中所有字段和值</li>
+</ul>
+
+:ET

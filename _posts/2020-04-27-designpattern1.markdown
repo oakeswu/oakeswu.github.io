@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "普通工厂模式"
+title:      "设计模式(一) -- 普通工厂模式"
 subtitle:   ""
 date:       2020-04-27
 author:     "OakesWu"

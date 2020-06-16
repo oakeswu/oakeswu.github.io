@@ -1,31 +1,21 @@
----
-layout:     post
-title:      "Java并发(十二) -- synchronized和volatile底层原理"
-subtitle:   ""
-date:       2020-06-11
-author:     "OakesWu"
-header-img: "img/post-bg-2015.jpg"
-tags:
-    - Java并发
----
+I"{(<p><strong>本文主要参考Java并发编程的艺术，IA-32架构软件开发人员手册并基于JDK1.8</strong></p>
 
-**本文主要参考Java并发编程的艺术，IA-32架构软件开发人员手册并基于JDK1.8**
+<h1 id="背景">背景</h1>
+<p>我们在之前的文章中多次用到了volatile和synchronized，volatile可以保证可见性，有序性，但是不能保证原子性，所以线程中如果包含volatile共享变量的非原子性操作就可能存在并发风险，此时可以考虑使用synchronized锁，所以我们探究下volatile是如何保证可见性和有序性， synchronized是如何实现锁机制的。</p>
 
-# 背景
-我们在之前的文章中多次用到了volatile和synchronized，volatile可以保证可见性，有序性，但是不能保证原子性，所以线程中如果包含volatile共享变量的非原子性操作就可能存在并发风险，此时可以考虑使用synchronized锁，所以我们探究下volatile是如何保证可见性和有序性， synchronized是如何实现锁机制的。
-
-# volatile
-- 可见性
-首先我们在[JMM](https://www.jianshu.com/writer#/notebooks/45155628/notes/69448465)中可以得知线程工作内存其实就是CPU寄存器和高速缓存的抽象描述，在单CPU中由于线程其实是共用同一个高速缓存中的，所以不存在缓存不一致问题，而在多CPU中存在多个高速缓存区，从而存在缓存不一致的情况。
+<h1 id="volatile">volatile</h1>
+<ul>
+  <li>可见性
+首先我们在<a href="https://www.jianshu.com/writer#/notebooks/45155628/notes/69448465">JMM</a>中可以得知线程工作内存其实就是CPU寄存器和高速缓存的抽象描述，在单CPU中由于线程其实是共用同一个高速缓存中的，所以不存在缓存不一致问题，而在多CPU中存在多个高速缓存区，从而存在缓存不一致的情况。
 1：线程A在CPU1对应的Cache1中同步了主内存的一份数据Data1
 2：线程B在CPU2对应的Cache2中同步了主内存的一份数据Data2
 3：线程开始前Data1和Data2都是同步的主内存中的数据，所以Data1的数据跟Data2的数据相同
 4：线程A开始执行并修改Cache1中的Data1数据，然后更新到主内存中
 5：线程B开始执行并修改Cache2中的Data2数据，Data2数据同步到主内存中，此时覆盖了Data1的数据
-那么这时候加上volatile可以避免这种情况发生，当第四步Data1同步到主内存中时就会让Cache2中的Data2失效并重新拉取主内存数据，保证Data2数据与主内存最新数据一致。我们看下volatile如何实现的
+那么这时候加上volatile可以避免这种情况发生，当第四步Data1同步到主内存中时就会让Cache2中的Data2失效并重新拉取主内存数据，保证Data2数据与主内存最新数据一致。我们看下volatile如何实现的</li>
+</ul>
 
-```
-public class VolatileTest {
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class VolatileTest {
 
     private static volatile String volatileStr;
 
@@ -34,13 +24,11 @@ public class VolatileTest {
     }
 }
 
-```
+</code></pre></div></div>
 
-将代码对应的汇编语言打印出来看看，我这里直截取了一部分
+<p>将代码对应的汇编语言打印出来看看，我这里直截取了一部分</p>
 
-
-```
-CompilerOracle: compileonly *VolatileTest.main
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CompilerOracle: compileonly *VolatileTest.main
 Connected to the target VM, address: '127.0.0.1:65126', transport: 'socket'
 Loaded disassembler from hsdis-amd64.dll
 Decoding compiled method 0x0000000002d99d50:
@@ -100,12 +88,11 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 0x0000000002d99f61: jmp     2cff6e0h          ;   {runtime_call}
 0x0000000002d99f66: hlt
 0x0000000002d99f67: hlt
-```
+</code></pre></div></div>
 
-我们主要找到lock add dword ptr [rsp],0h  ;*putstatic volatileStr ; - newthread.VolatileTest::main@2 (line 12)这句话，我们可以发现加了一个lock命令，此时你把代码中的volatile去掉你会发现没有lock命令了，那么这个lock命令的作用是啥，我们查查IA-32架构手册可以看到
+<p>我们主要找到lock add dword ptr [rsp],0h  ;*putstatic volatileStr ; - newthread.VolatileTest::main@2 (line 12)这句话，我们可以发现加了一个lock命令，此时你把代码中的volatile去掉你会发现没有lock命令了，那么这个lock命令的作用是啥，我们查查IA-32架构手册可以看到</p>
 
-```
-在Pentium 和早期的IA-32 处理器中，LOCK 前缀会使处理器执行当前指令时产生
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>在Pentium 和早期的IA-32 处理器中，LOCK 前缀会使处理器执行当前指令时产生
 一个LOCK#信号，这总是引起显式总线锁定出现。
 在Pentium 4、Intel Xeon 和P6 系列处理器中，加锁操作是由高速缓存锁或总线
 锁来处理。如果内存访问有高速缓存且只影响一个单独的高速缓存线，那么操作中就
@@ -114,22 +101,23 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 并使它们的高速缓存失效，以保证系统内存的一致性。如果内存访问没有高速缓存且/
 或它跨越了高速缓存线的边界，那么这个处理器就会产生LOCK#信号，并在锁定操作期
 间不会响应总线控制请求。
-```
+</code></pre></div></div>
 
-所以我们可以看到lock命令会保证系统内存的一致性
+<p>所以我们可以看到lock命令会保证系统内存的一致性</p>
 
-- 有序性
+<ul>
+  <li>有序性
 jvm会对代码进行编译器重排序和处理器重排序进行代码执行效率的优化，但是在并发中可能造成并发风险，volatile通过内存屏障禁止指令重排序来保证有序性。
 1：在每个volatile写操作的前面插入一个StoreStore屏障，防止写volatile与后面的写操作重排序。
 2：在每个volatile写操作的后面插入一个StoreLoad屏障，防止写volatile与后面的读操作重排序。
 3：在每个volatile读操作的后面插入一个LoadLoad屏障，防止读volatile与后面的读操作重排序。
-4：在每个volatile读操作的后面插入一个LoadStore屏障，防止读volatile与后面的写操作重排序。
+4：在每个volatile读操作的后面插入一个LoadStore屏障，防止读volatile与后面的写操作重排序。</li>
+</ul>
 
-# synchronized
-synchronized是java很早就有的一个重量级锁，同步方法和同步代码块是通过不同方式实现线程安全的。同步方法是通过lock cmpxchg命令，使用了CAS思想判断。同步代码块则是通过monitorenter和monitorexit实现，JVM要保证每个monitorenter必须有对应的monitorexit配对，线程执行到monitorenter指令时将会尝试获取对象对应的moitor的所有权，即对象锁。我们可以看下代码实例
+<h1 id="synchronized">synchronized</h1>
+<p>synchronized是java很早就有的一个重量级锁，同步方法和同步代码块是通过不同方式实现线程安全的。同步方法是通过lock cmpxchg命令，使用了CAS思想判断。同步代码块则是通过monitorenter和monitorexit实现，JVM要保证每个monitorenter必须有对应的monitorexit配对，线程执行到monitorenter指令时将会尝试获取对象对应的moitor的所有权，即对象锁。我们可以看下代码实例</p>
 
-```
-public class SynchronizedPrincipleTest {
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class SynchronizedPrincipleTest {
     private static synchronized void test() {
         System.out.println("test");
     }
@@ -158,9 +146,9 @@ public class SynchronizedPrincipleTest {
 0x00000000029ed2e9: lock cmpxchg qword ptr [r10],r11
 0x00000000029ed2ee: lea     rbx,[rsp+0h]
 0x00000000029ed2f3: mov     rax,qword ptr [r10]
-```
-```
-public class SynchronizedPrincipleTest {
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class SynchronizedPrincipleTest {
 
    public static void main(String[] args) {
         synchronized (SynchronizedTest.class) {
@@ -178,7 +166,8 @@ public class SynchronizedPrincipleTest {
 0x000000000378a035: mov     qword ptr [rsp+20h],rdx
 0x000000000378a03a: nop     word ptr [rax+rax+0h]
 0x000000000378a040: jmp     378a2b8h          ;   {no_reloc}
-```
+</code></pre></div></div>
 
-# 总结
-我们上面讲到了synchronized和volatile的原理发现并发中的可见性，有序性和原子性保证之后就可以并发安全，但是synchronized的有序性和volatile的有序性含义不一样，synchronized通过锁的争抢保证线程执行的有序性，而volatile保证的是指令重排序的有序性。这也是为什么**懒汉式单例模式加了synchronized也仍然需要给变量加volatile的原因**
+<h1 id="总结">总结</h1>
+<p>我们上面讲到了synchronized和volatile的原理发现并发中的可见性，有序性和原子性保证之后就可以并发安全，但是synchronized的有序性和volatile的有序性含义不一样，synchronized通过锁的争抢保证线程执行的有序性，而volatile保证的是指令重排序的有序性。这也是为什么<strong>懒汉式单例模式加了synchronized也仍然需要给变量加volatile的原因</strong></p>
+:ET

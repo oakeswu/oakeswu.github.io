@@ -1,0 +1,71 @@
+I"v<h1 id="背景">背景</h1>
+<p>项目中有时候会使用Collections.emptyList返回一个空列表，但是emptyList在执行add，remove等方法时会直接抛出UnsupportedOperationException异常，我们可以看下源码</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class Collections {
+    public static final List EMPTY_LIST = new EmptyList&lt;&gt;();
+
+    public static final &lt;T&gt; List&lt;T&gt; emptyList() {
+        return (List&lt;T&gt;) EMPTY_LIST;
+    }
+
+    private static class EmptyList&lt;E&gt;
+        extends AbstractList&lt;E&gt;
+        implements RandomAccess, Serializable {
+
+        public int size() {return 0;}
+        public boolean isEmpty() {return true;}
+        public boolean contains(Object obj) {return false;}
+        public E get(int index) {
+            throw new IndexOutOfBoundsException("Index: "+index);
+        }
+    }
+}
+
+public abstract class AbstractList&lt;E&gt; extends AbstractCollection&lt;E&gt; implements List&lt;E&gt; {
+    public boolean add(E e) {
+        add(size(), e);
+        return true;
+    }
+    
+    public void add(int index, E element) {
+        throw new UnsupportedOperationException();
+    }
+}
+</code></pre></div></div>
+<p>我们可以发现emptyList最后执行的是AbstractList里面的add方法，所以会直接抛出异常。为了避免报错，有同事提议将emptyList都用new ArrayList()代替，此时决定看下emptyList的优势</p>
+
+<h1 id="代码">代码</h1>
+<p>通过百度知道emptyList不需要占用内存，而ArrayList每次new都会在堆中开辟内存空间存放对象，我们先通过代码验证一下</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class ListTest {
+    private static final int printCount = 10000;
+
+    public static void main(String[] args) {
+       
+        long freeMemory = Runtime.getRuntime().freeMemory();
+        System.out.println("freeMemory: " + freeMemory);
+
+        for (int i = 0; i &lt; printCount; i++) {
+            List newList = new ArrayList();
+        }
+
+        long freeMemoryNew=Runtime.getRuntime().freeMemory();
+        System.out.println("freeMemory use: "+(freeMemory-freeMemoryNew));
+
+        for(int i = 0;i &lt; printCount; i++){
+            List emptyList = Collections.emptyList();
+        }
+        long freeMemoryEmpty = Runtime.getRuntime().freeMemory();
+        System.out.println("freeMemory use: "+(freeMemoryNew-freeMemoryEmpty));
+    }
+}
+</code></pre></div></div>
+<p>此时我们看一下执行结果</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Connected to the target VM, address: '127.0.0.1:63534', transport: 'socket'
+Disconnected from the target VM, address: '127.0.0.1:63534', transport: 'socket'
+freeMemory: 253398816
+freeMemory use: 1430376
+freeMemory use: 0
+
+Process finished with exit code 0
+</code></pre></div></div>
+<p>我们可以看出new ArrayList执行一万次会消耗1430376KB内存，而Collections.emptyList不会消耗内存，那有人会说emptyList不也是new EmptyList()吗？其实我们再仔细看下上面的源码就发现emptyList是一个static变量，只会初始化一次，所以后续使用不会再初始化对象。此时我们可以得出结论，emptyList不占用内存，但是无法执行add等方法，new ArrayList()占用内存，但是会初始化对象数组，可以执行add等方法。</p>
+:ET

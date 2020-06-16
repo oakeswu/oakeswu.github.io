@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "单例模式"
+title:      "设计模式(三) -- 单例模式"
 subtitle:   ""
 date:       2020-04-29
 author:     "OakesWu"

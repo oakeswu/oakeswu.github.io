@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "抽象工厂模式"
+title:      "设计模式(二) -- 抽象工厂模式"
 subtitle:   ""
 date:       2020-04-28
 author:     "OakesWu"
