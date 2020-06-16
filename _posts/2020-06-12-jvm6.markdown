@@ -62,11 +62,10 @@ S0     S1     E      O      M     CCS    YGC     YGCT    FGC    FGCT     GCT
 ```
 
 - jstack 打印出JVM线程的状态
-- jmap 通过jmap -heap pid也可以打印出堆的使用情况
+- jmap 通过jmap -heap pid也可以打印出堆的使用情况。
 ```
 jmap -heap 38
 Garbage-First (G1) GC with 2 thread(s)
-
 Heap Configuration:
    MinHeapFreeRatio         = 30
    MaxHeapFreeRatio         = 50
@@ -80,7 +79,6 @@ Heap Configuration:
    CompressedClassSpaceSize = 260046848 (248.0MB)
    MaxMetaspaceSize         = 268435456 (256.0MB)
    G1HeapRegionSize         = 1048576 (1.0MB)
-
 Heap Usage:
 G1 Heap:
    regions  = 1248
@@ -107,7 +105,6 @@ G1 Old Generation:
    used     = 303378800 (289.32456970214844MB)
    free     = 62574224 (59.67543029785156MB)
    82.90102283729182% used
-
 45296 interned Strings occupying 5894320 bytes.
 ```
 我们从上面打印的信息也能看出来当前JVM使用了G1回收器

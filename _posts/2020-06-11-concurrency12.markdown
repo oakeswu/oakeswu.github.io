@@ -23,22 +23,15 @@ tags:
 4：线程A开始执行并修改Cache1中的Data1数据，然后更新到主内存中
 5：线程B开始执行并修改Cache2中的Data2数据，Data2数据同步到主内存中，此时覆盖了Data1的数据
 那么这时候加上volatile可以避免这种情况发生，当第四步Data1同步到主内存中时就会让Cache2中的Data2失效并重新拉取主内存数据，保证Data2数据与主内存最新数据一致。我们看下volatile如何实现的
-
 ```
 public class VolatileTest {
-
     private static volatile String volatileStr;
-
     public static void main(String[] args) {
         volatileStr = "test";
     }
 }
-
 ```
-
 将代码对应的汇编语言打印出来看看，我这里直截取了一部分
-
-
 ```
 CompilerOracle: compileonly *VolatileTest.main
 Connected to the target VM, address: '127.0.0.1:65126', transport: 'socket'
@@ -64,7 +57,6 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 0x0000000002d99ecf: and     edi,0h
 0x0000000002d99ed2: cmp     edi,0h
 0x0000000002d99ed5: je      2d99f1dh          ;*ldc  ; - newthread.VolatileTest::main@0 (line 12)
-
 0x0000000002d99edb: mov     rsi,76b4bb498h    ;   {oop(a 'java/lang/Class' = 'newthread/VolatileTest')}
 0x0000000002d99ee5: mov     rdi,76b60f5e8h    ;   {oop("test")}
 0x0000000002d99eef: mov     r10,rdi
@@ -75,7 +67,6 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 0x0000000002d99f08: mov     byte ptr [rsi+rdi],0h
 0x0000000002d99f0c: lock add dword ptr [rsp],0h  ;*putstatic volatileStr
                                               ; - newthread.VolatileTest::main@2 (line 12)
-
 0x0000000002d99f11: add     rsp,30h
 0x0000000002d99f15: pop     rbp
 0x0000000002d99f16: test    dword ptr [0c30100h],eax
@@ -101,9 +92,7 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 0x0000000002d99f66: hlt
 0x0000000002d99f67: hlt
 ```
-
 我们主要找到lock add dword ptr [rsp],0h  ;*putstatic volatileStr ; - newthread.VolatileTest::main@2 (line 12)这句话，我们可以发现加了一个lock命令，此时你把代码中的volatile去掉你会发现没有lock命令了，那么这个lock命令的作用是啥，我们查查IA-32架构手册可以看到
-
 ```
 在Pentium 和早期的IA-32 处理器中，LOCK 前缀会使处理器执行当前指令时产生
 一个LOCK#信号，这总是引起显式总线锁定出现。
@@ -115,7 +104,6 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 或它跨越了高速缓存线的边界，那么这个处理器就会产生LOCK#信号，并在锁定操作期
 间不会响应总线控制请求。
 ```
-
 所以我们可以看到lock命令会保证系统内存的一致性
 
 - 有序性
@@ -127,13 +115,11 @@ jvm会对代码进行编译器重排序和处理器重排序进行代码执行�
 
 # synchronized
 synchronized是java很早就有的一个重量级锁，同步方法和同步代码块是通过不同方式实现线程安全的。同步方法是通过lock cmpxchg命令，使用了CAS思想判断。同步代码块则是通过monitorenter和monitorexit实现，JVM要保证每个monitorenter必须有对应的monitorexit配对，线程执行到monitorenter指令时将会尝试获取对象对应的moitor的所有权，即对象锁。我们可以看下代码实例
-
 ```
 public class SynchronizedPrincipleTest {
     private static synchronized void test() {
         System.out.println("test");
     }
-
     public static void main(String[] args) {
         test();
     }
