@@ -31,7 +31,7 @@ public class VolatileTest {
     }
 }
 ```
-将代码对应的汇编语言打印出来看看，我这里直截取了一部分
+将代码对应的汇编语言打印出来看看，我这里只截取了一部分
 ```
 CompilerOracle: compileonly *VolatileTest.main
 Connected to the target VM, address: '127.0.0.1:65126', transport: 'socket'
