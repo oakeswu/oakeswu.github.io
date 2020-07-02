@@ -1,11 +1,11 @@
 # Site settings
-title: Do What You Can't
-SEOTitle: 我的博客 | Oakes Blog
+title: Oakes Blog
+SEOTitle: Oakes Blog
 header-img: img/homebg.jpg
 email: 
 description: 
 keyword: ""
-url: "oakeswu.github.com"              # your host, for absolute URL
+url: "oakeswu.github.io"              # your host, for absolute URL
 baseurl: ""         # for example, '/blog' if your blog hosted on 'host/blog'
 
 
@@ -63,7 +63,7 @@ ga_domain:
 
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
-sidebar-about-description: "Coder,Java后端,ES,业余Dancer"
+sidebar-about-description: "Coder,Java后端,ES,Dancer"
 sidebar-avatar: /img/avatar.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
