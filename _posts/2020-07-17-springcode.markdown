@@ -31,7 +31,7 @@ public class MyTestBean {
     }
 }
 ```
-- beanFactoryTest.xml
+- beanFactoryTest
 ```
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
@@ -40,10 +40,10 @@ public class MyTestBean {
     <bean id="myTestBean" class="MyTestBean"/>
 </beans>
 ```
+
 - BeanFactoryTest
 ```
 public class BeanFactoryTest {
-
     @Test
     public void testSimpleLoad(){
         BeanFactory beanFactory = new XmlBeanFactory(new ClassPathResource("beanFactoryTest.xml"));
