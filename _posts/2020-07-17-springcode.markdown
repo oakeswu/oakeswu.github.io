@@ -31,15 +31,9 @@ public class MyTestBean {
     }
 }
 ```
-- beanFactoryTest
-```
-<?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
-    <bean id="myTestBean" class="MyTestBean"/>
-</beans>
-```
+- beanFactoryTest.xml
+![](/img/doc/springcode/spring1two.png)
+因为xml在jeklly不能正常显示，所以我们这边用图片展示，其实重要的就是中间的配置一行
 
 - BeanFactoryTest
 ```
@@ -53,6 +47,6 @@ public class BeanFactoryTest {
 }
 ```
 然后我们执行以下测试方法，看下执行的结果是啥？
-![](/img/doc/springcode/spring1one.png)
+![](/img/doc/springcode/spring1three.png)
 我们可以看到测试代码成功根据配置文件中id获取到了对应的MyTestBean对象。这其实就是一个我们常说的简单的Ioc案例。以前我们获取MyTestBean对象都是通过new一个对象出来，但是案例中Spring通过xml配置获取到了MyTestBean对象，对象的控制权由用户反转给了Spring。下面就是我们需要去理解这个测试代码的过程从而进入Spring的源码世界。
 测试代码执行中可能会报**找不到org.apache.commons.logging.Log错误** 解决办法就是**在build.gradle文件configure(allprojects)节点的dependencies中compile("org.slf4j:jcl-over-slf4j:${log4jVersion}")就可以解决了**

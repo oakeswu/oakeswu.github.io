@@ -1,0 +1,289 @@
+I">*<p><strong>本文参考JDK1.8源码、《JDK并发编程的艺术》、<a href="https://zhuanlan.zhihu.com/p/97317561">AQS详解</a>、<a href="https://www.infoq.cn/article/jdk1.8-abstractqueuedsynchronizer">AQS实现分析(上)</a>、<a href="https://www.infoq.cn/article/java8-abstractqueuedsynchronizer/">AQS实现分析(下)</a></strong></p>
+
+<h1 id="背景">背景</h1>
+<p>很早就应该写AQS类，但是AQS类在并发中是个特别重要的类，所以参考了不少文章之后才开始写，也算做一个简单的学习总结</p>
+
+<h1 id="什么是aqs">什么是AQS</h1>
+<p>AQS是一个抽象类，其中AQS的子类通过对同步状态State的修改达到对不同状态的控制；例如ReentrantLock通过State值是否为0来判断当前线程是否获取到锁，AQS很常见的运用在很多子类中的内部类中，子类通过重写tryAcquire，tryRelease，tryAcquireShared，tryReleaseShared方法来实现独占锁和共享锁模式。AQS通过底层通过CAS实现了锁，而synchronized则是通过JVM实现锁，这是两者的一个区别。</p>
+
+<h1 id="源码">源码</h1>
+<ul>
+  <li>Node内部类
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>static final class Node {
+      //当前线程节点是共享模式
+      static final Node SHARED = new Node();
+
+      //当前线程节点是独占模式
+      static final Node EXCLUSIVE = null;
+
+      //同步队列中被取消的节点
+      static final int CANCELLED =  1;
+
+      //后续节点需要唤醒
+      static final int SIGNAL    = -1;
+
+      //线程在等待队列中等待
+      static final int CONDITION = -2;
+
+      //共享模式下可以唤醒后续的共享节点
+      static final int PROPAGATE = -3;
+
+      //保存节点状态，值为上面0和上面几个int值
+      volatile int waitStatus;
+
+      //前序节点
+      volatile Node prev;
+
+      //后续节点
+      volatile Node next;
+
+      //当前节点线程
+      volatile Thread thread;
+
+      //关联Condition上的后续节点或者表明是否是共享模式
+      Node nextWaiter;
+
+      //当前节点是否是共享模式
+      final boolean isShared() {
+          return nextWaiter == SHARED;
+      }
+      //返回前序节点
+      final Node predecessor() throws NullPointerException {
+          Node p = prev;
+          if (p == null)
+              throw new NullPointerException();
+          else
+              return p;
+      }
+      Node() {}
+      Node(Node nextWaiter) {
+          this.nextWaiter = nextWaiter;
+          U.putObject(this, THREAD, Thread.currentThread());
+      }
+      Node(int waitStatus) {
+          U.putInt(this, WAITSTATUS, waitStatus);
+          U.putObject(this, THREAD, Thread.currentThread());
+      }
+}
+</code></pre></div>    </div>
+    <p>我们可以从上面Node源码首先看到Node其实是一个线程的包装类，并且标记了线程的状态（0，CANCELLED，SIGNAL，CONDITION，PROPAGATE），以及区分独占，共享模式。然后通过prev，next变量实现一个双向链表。</p>
+  </li>
+  <li>变量
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public abstract class AbstractQueuedSynchronizer
+  extends AbstractOwnableSynchronizer
+  implements java.io.Serializable {
+
+  // 头结点
+  private transient volatile Node head;
+    
+  //尾结点
+  private transient volatile Node tail;
+
+  //表示同步状态的state字段
+  private volatile int state;
+  protected final int getState() {
+      return state;
+  }
+  protected final void setState(int newState) {
+      state = newState;
+  }
+}
+</code></pre></div>    </div>
+    <p>我们可以看到AQS有一个head和tail的节点分别指向上面Node类组成的双向链表的头部节点和尾部节点，state字段则是表示同步状态</p>
+  </li>
+  <li>独占模式
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//独占式获取锁
+public final void acquire(long arg) {
+    if (!tryAcquire(arg) &amp;&amp;
+        acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+        selfInterrupt();
+}
+//tryAcquire由子类重写
+protected boolean tryAcquire(int arg) {
+  throw new UnsupportedOperationException();
+}
+// 将获取失败的线程封装成节点放入等待队列中
+private Node addWaiter(Node mode) {
+  Node node = new Node(Thread.currentThread(), mode);
+  Node pred = tail;
+  //如果当前队列不为空，直接尝试将当前节点放到队列末尾 
+  if (pred != null) {
+      node.prev = pred;
+      if (compareAndSetTail(pred, node)) {
+          pred.next = node;
+          return node;
+      }
+  }
+  //如果上面加入队列失败再尝试入队
+  enq(node);
+  return node;
+}
+// 节点入队列，可能需要初始化队列所以需要循环
+private Node enq(final Node node) {
+  for (;;) {
+      Node t = tail;
+      if (t == null) { // Must initialize
+          if (compareAndSetHead(new Node()))
+              tail = head;
+      } else {
+          node.prev = t;
+          if (compareAndSetTail(t, node)) {
+              t.next = node;
+              return t;
+          }
+      }
+  }
+}
+final boolean acquireQueued(final Node node, long arg) {
+  boolean failed = true;
+  try {
+        boolean interrupted = false;
+        for (;;) {
+            //获取前面的节点，如果前面节点是头结点可能刚释放完锁所以就尝试下获取锁
+            final Node p = node.predecessor();
+            if (p == head &amp;&amp; tryAcquire(arg)) {
+                setHead(node);
+                p.next = null; // 回收调之前的head节点
+                failed = false;
+                return interrupted;
+            }
+            //判断当前节点是否可以阻塞即前一个Node的waitStatus是否是Singal或者可以被设置成Singal，如果可以就让自己阻塞住，等待前序节点的通知再唤醒
+            if (shouldParkAfterFailedAcquire(p, node) &amp;&amp;
+                parkAndCheckInterrupt())
+                interrupted = true;
+        }
+    } finally {
+        if (failed)
+            cancelAcquire(node);
+    }
+}
+//释放锁，如果tryRelease判断可以释放，就执行唤醒head的后续节点线程
+public final boolean release(long arg) {
+  if (tryRelease(arg)) {
+      Node h = head;
+      if (h != null &amp;&amp; h.waitStatus != 0)
+          unparkSuccessor(h);
+      return true;
+  }
+  return false;
+}
+//子类实现tryRelease方法
+protected boolean tryRelease(int arg) {
+      throw new UnsupportedOperationException();
+}
+private void unparkSuccessor(Node node) {
+  int ws = node.waitStatus;
+  if (ws &lt; 0)
+      compareAndSetWaitStatus(node, ws, 0);
+
+  Node s = node.next;
+  if (s == null || s.waitStatus &gt; 0) {
+      s = null;
+      for (Node t = tail; t != null &amp;&amp; t != node; t = t.prev)
+          if (t.waitStatus &lt;= 0)
+              s = t;
+  }
+  if (s != null)
+      LockSupport.unpark(s.thread);
+}
+</code></pre></div>    </div>
+    <p>我们可以看到获取独占锁的流程是
+1：通过子类的实现先获取一下锁，成功则退出acquire方法
+2：子类方法获取锁失败，则调用addWaiter将获取锁失败的线程封装成Node并放入等待队列中
+3：Node放入等待队列中之后，由于获取锁的线程或者前面的Node节点可能释放完并通知到当前Node可以获取锁，所以可以先尝试获取锁，由于后序节点可以阻塞等待，所以需要循环判断等待</p>
+  </li>
+</ul>
+
+<p>释放锁的流程是
+1：通过子类实现tryRelease先尝试释放锁
+2：如果成功获取就调用unparkSuccessor方法去唤醒后一个节点，让后一个节点在acquireQueued中重新循环去获取</p>
+
+<p>那么我们可以看下流程图：
+<img src="/img/doc/concurrency/concurrency13one.png" alt="共享锁的获取与释放" /></p>
+
+<ul>
+  <li>共享模式
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//共享式获取锁
+public final void acquireShared(int arg) {
+  if (tryAcquireShared(arg) &lt; 0)
+      doAcquireShared(arg);
+}
+//等到子类实现
+protected int tryAcquireShared(int arg) {
+    throw new UnsupportedOperationException();
+}
+private void doAcquireShared(int arg) {
+  final Node node = addWaiter(Node.SHARED);
+  boolean failed = true;
+  try {
+      boolean interrupted = false;
+      for (;;) {
+          final Node p = node.predecessor();
+          if (p == head) {
+              int r = tryAcquireShared(arg);
+              if (r &gt;= 0) {
+                  setHeadAndPropagate(node, r);
+                  p.next = null; // help GC
+                  if (interrupted)
+                      selfInterrupt();
+                  failed = false;
+                  return;
+              }
+          }
+          if (shouldParkAfterFailedAcquire(p, node) &amp;&amp;
+                  parkAndCheckInterrupt())
+              interrupted = true;
+      }
+  } finally {
+      if (failed)
+          cancelAcquire(node);
+  }
+}
+//将释放锁的Node放到Head节点并唤醒后序节点
+private void setHeadAndPropagate(Node node, int propagate) {
+  Node h = head; 
+  setHead(node);
+   
+  if (propagate &gt; 0 || h == null || h.waitStatus &lt; 0 ||
+          (h = head) == null || h.waitStatus &lt; 0) {
+      Node s = node.next;
+      if (s == null || s.isShared())
+          doReleaseShared();
+  }
+}
+// 判断是否唤醒节点后面的锁
+private void doReleaseShared() {
+   
+  for (;;) {
+      Node h = head;
+      if (h != null &amp;&amp; h != tail) {
+          int ws = h.waitStatus;
+          if (ws == Node.SIGNAL) {
+              if (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))
+                  continue;            // loop to recheck cases
+              unparkSuccessor(h);
+          }
+          else if (ws == 0 &amp;&amp;
+                  !compareAndSetWaitStatus(h, 0, Node.PROPAGATE))
+              continue;                // loop on failed CAS
+      }
+      if (h == head)                   // loop if head changed
+          break;
+  }
+}
+//释放锁
+public final boolean releaseShared(int arg) {
+    if (tryReleaseShared(arg)) {
+          doReleaseShared();
+          return true;
+      }
+      return false;
+}
+</code></pre></div>    </div>
+    <p>共享模式和独占模式差不多，都是先让子类来执行获取和释放锁的具体规则，然后再执行放入等待队列或者唤醒后序节点的操作，那区别在哪里？我们可以看到共享模式中节点获取到锁之后会直接尝试唤醒后序节点，后序节点获取锁成功后再唤醒后序节点，这样就能通知到所有的共享节点直到有独占节点出现。</p>
+  </li>
+</ul>
+
+<h1 id="总结">总结</h1>
+<p>AQS是并发包中很多锁的基础，像ReentrantLock中的公平锁和非公平锁，CountdownLatch等，所以后面会再继续学习一下AQS的应用</p>
+:ET

@@ -1,4 +1,4 @@
-I"{(<p><strong>本文主要参考Java并发编程的艺术，IA-32架构软件开发人员手册并基于JDK1.8</strong></p>
+I"v(<p><strong>本文主要参考Java并发编程的艺术，IA-32架构软件开发人员手册并基于JDK1.8</strong></p>
 
 <h1 id="背景">背景</h1>
 <p>我们在之前的文章中多次用到了volatile和synchronized，volatile可以保证可见性，有序性，但是不能保证原子性，所以线程中如果包含volatile共享变量的非原子性操作就可能存在并发风险，此时可以考虑使用synchronized锁，所以我们探究下volatile是如何保证可见性和有序性， synchronized是如何实现锁机制的。</p>
@@ -12,23 +12,16 @@
 3：线程开始前Data1和Data2都是同步的主内存中的数据，所以Data1的数据跟Data2的数据相同
 4：线程A开始执行并修改Cache1中的Data1数据，然后更新到主内存中
 5：线程B开始执行并修改Cache2中的Data2数据，Data2数据同步到主内存中，此时覆盖了Data1的数据
-那么这时候加上volatile可以避免这种情况发生，当第四步Data1同步到主内存中时就会让Cache2中的Data2失效并重新拉取主内存数据，保证Data2数据与主内存最新数据一致。我们看下volatile如何实现的</li>
-</ul>
-
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class VolatileTest {
-
-    private static volatile String volatileStr;
-
-    public static void main(String[] args) {
-        volatileStr = "test";
-    }
+那么这时候加上volatile可以避免这种情况发生，当第四步Data1同步到主内存中时就会让Cache2中的Data2失效并重新拉取主内存数据，保证Data2数据与主内存最新数据一致。我们看下volatile如何实现的
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class VolatileTest {
+  private static volatile String volatileStr;
+  public static void main(String[] args) {
+      volatileStr = "test";
+  }
 }
-
-</code></pre></div></div>
-
-<p>将代码对应的汇编语言打印出来看看，我这里直截取了一部分</p>
-
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CompilerOracle: compileonly *VolatileTest.main
+</code></pre></div>    </div>
+    <p>将代码对应的汇编语言打印出来看看，我这里只截取了一部分</p>
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CompilerOracle: compileonly *VolatileTest.main
 Connected to the target VM, address: '127.0.0.1:65126', transport: 'socket'
 Loaded disassembler from hsdis-amd64.dll
 Decoding compiled method 0x0000000002d99d50:
@@ -52,7 +45,6 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 0x0000000002d99ecf: and     edi,0h
 0x0000000002d99ed2: cmp     edi,0h
 0x0000000002d99ed5: je      2d99f1dh          ;*ldc  ; - newthread.VolatileTest::main@0 (line 12)
-
 0x0000000002d99edb: mov     rsi,76b4bb498h    ;   {oop(a 'java/lang/Class' = 'newthread/VolatileTest')}
 0x0000000002d99ee5: mov     rdi,76b60f5e8h    ;   {oop("test")}
 0x0000000002d99eef: mov     r10,rdi
@@ -62,19 +54,18 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 0x0000000002d99efe: mov     rdi,0ea43000h
 0x0000000002d99f08: mov     byte ptr [rsi+rdi],0h
 0x0000000002d99f0c: lock add dword ptr [rsp],0h  ;*putstatic volatileStr
-                                              ; - newthread.VolatileTest::main@2 (line 12)
-
+                                            ; - newthread.VolatileTest::main@2 (line 12)
 0x0000000002d99f11: add     rsp,30h
 0x0000000002d99f15: pop     rbp
 0x0000000002d99f16: test    dword ptr [0c30100h],eax
-                                              ;   {poll_return}
+                                            ;   {poll_return}
 0x0000000002d99f1c: ret
 0x0000000002d99f1d: mov     qword ptr [rsp+8h],rsi
 0x0000000002d99f22: mov     qword ptr [rsp],0ffffffffffffffffh
 0x0000000002d99f2a: call    2d8f360h          ; OopMap{rdx=Oop off=143}
-                                              ;*synchronization entry
-                                              ; - newthread.VolatileTest::main@-1 (line 12)
-                                              ;   {runtime_call}
+                                            ;*synchronization entry
+                                            ; - newthread.VolatileTest::main@-1 (line 12)
+                                            ;   {runtime_call}
 0x0000000002d99f2f: jmp     2d99edbh
 0x0000000002d99f31: nop
 0x0000000002d99f32: nop
@@ -88,11 +79,9 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 0x0000000002d99f61: jmp     2cff6e0h          ;   {runtime_call}
 0x0000000002d99f66: hlt
 0x0000000002d99f67: hlt
-</code></pre></div></div>
-
-<p>我们主要找到lock add dword ptr [rsp],0h  ;*putstatic volatileStr ; - newthread.VolatileTest::main@2 (line 12)这句话，我们可以发现加了一个lock命令，此时你把代码中的volatile去掉你会发现没有lock命令了，那么这个lock命令的作用是啥，我们查查IA-32架构手册可以看到</p>
-
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>在Pentium 和早期的IA-32 处理器中，LOCK 前缀会使处理器执行当前指令时产生
+</code></pre></div>    </div>
+    <p>我们主要找到lock add dword ptr [rsp],0h  ;*putstatic volatileStr ; - newthread.VolatileTest::main@2 (line 12)这句话，我们可以发现加了一个lock命令，此时你把代码中的volatile去掉你会发现没有lock命令了，那么这个lock命令的作用是啥，我们查查IA-32架构手册可以看到</p>
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>在Pentium 和早期的IA-32 处理器中，LOCK 前缀会使处理器执行当前指令时产生
 一个LOCK#信号，这总是引起显式总线锁定出现。
 在Pentium 4、Intel Xeon 和P6 系列处理器中，加锁操作是由高速缓存锁或总线
 锁来处理。如果内存访问有高速缓存且只影响一个单独的高速缓存线，那么操作中就
@@ -101,11 +90,9 @@ Argument 0 is unknown.RIP: 0x2d99ea0 Code size: 0x00000170
 并使它们的高速缓存失效，以保证系统内存的一致性。如果内存访问没有高速缓存且/
 或它跨越了高速缓存线的边界，那么这个处理器就会产生LOCK#信号，并在锁定操作期
 间不会响应总线控制请求。
-</code></pre></div></div>
-
-<p>所以我们可以看到lock命令会保证系统内存的一致性</p>
-
-<ul>
+</code></pre></div>    </div>
+    <p>所以我们可以看到lock命令会保证系统内存的一致性</p>
+  </li>
   <li>有序性
 jvm会对代码进行编译器重排序和处理器重排序进行代码执行效率的优化，但是在并发中可能造成并发风险，volatile通过内存屏障禁止指令重排序来保证有序性。
 1：在每个volatile写操作的前面插入一个StoreStore屏障，防止写volatile与后面的写操作重排序。
@@ -116,12 +103,10 @@ jvm会对代码进行编译器重排序和处理器重排序进行代码执行�
 
 <h1 id="synchronized">synchronized</h1>
 <p>synchronized是java很早就有的一个重量级锁，同步方法和同步代码块是通过不同方式实现线程安全的。同步方法是通过lock cmpxchg命令，使用了CAS思想判断。同步代码块则是通过monitorenter和monitorexit实现，JVM要保证每个monitorenter必须有对应的monitorexit配对，线程执行到monitorenter指令时将会尝试获取对象对应的moitor的所有权，即对象锁。我们可以看下代码实例</p>
-
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class SynchronizedPrincipleTest {
     private static synchronized void test() {
         System.out.println("test");
     }
-
     public static void main(String[] args) {
         test();
     }
@@ -147,7 +132,6 @@ jvm会对代码进行编译器重排序和处理器重排序进行代码执行�
 0x00000000029ed2ee: lea     rbx,[rsp+0h]
 0x00000000029ed2f3: mov     rax,qword ptr [r10]
 </code></pre></div></div>
-
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class SynchronizedPrincipleTest {
 
    public static void main(String[] args) {

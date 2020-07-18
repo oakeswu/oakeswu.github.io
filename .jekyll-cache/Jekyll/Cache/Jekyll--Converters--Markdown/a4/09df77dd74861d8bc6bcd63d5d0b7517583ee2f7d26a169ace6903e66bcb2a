@@ -1,9 +1,9 @@
-I"<h1 id="背景">背景</h1>
+I"8<h1 id="背景">背景</h1>
 <p>之前负责过部门老的搜索项目，当时JVM的参数会读取项目中的配置，所以生产发生过频繁GC的问题，之前只能帮助排查问题，随着学习的深入，决定总结一下JVM的一些工具和命令</p>
 
 <h1 id="参数">参数</h1>
-<p>-Xmx 堆的最小空间
--Xms 堆的最大空间
+<p>-Xmx 堆的最大空间
+-Xms 堆的最小空间
 -Xmn 年轻代大小
 -Xss 线程的堆栈大小
 -XX:SurvivorRatio	Eden区与Survivor区的比值
@@ -50,54 +50,51 @@ S0     S1     E      O      M     CCS    YGC     YGCT    FGC    FGCT     GCT
 </code></pre></div>    </div>
   </li>
   <li>jstack 打印出JVM线程的状态</li>
-  <li>jmap 通过jmap -heap pid也可以打印出堆的使用情况
-```
-jmap -heap 38
-Garbage-First (G1) GC with 2 thread(s)</li>
-</ul>
-
-<p>Heap Configuration:
-   MinHeapFreeRatio         = 30
-   MaxHeapFreeRatio         = 50
-   MaxHeapSize              = 1308622848 (1248.0MB)
-   NewSize                  = 1363144 (1.2999954223632812MB)
-   MaxNewSize               = 784334848 (748.0MB)
-   OldSize                  = 5452592 (5.1999969482421875MB)
-   NewRatio                 = 2
-   SurvivorRatio            = 8
-   MetaspaceSize            = 134217728 (128.0MB)
-   CompressedClassSpaceSize = 260046848 (248.0MB)
-   MaxMetaspaceSize         = 268435456 (256.0MB)
-   G1HeapRegionSize         = 1048576 (1.0MB)</p>
-
-<p>Heap Usage:
+  <li>jmap 通过jmap -heap pid也可以打印出堆的使用情况。
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jmap -heap 38
+Garbage-First (G1) GC with 2 thread(s)
+Heap Configuration:
+ MinHeapFreeRatio         = 30
+ MaxHeapFreeRatio         = 50
+ MaxHeapSize              = 1308622848 (1248.0MB)
+ NewSize                  = 1363144 (1.2999954223632812MB)
+ MaxNewSize               = 784334848 (748.0MB)
+ OldSize                  = 5452592 (5.1999969482421875MB)
+ NewRatio                 = 2
+ SurvivorRatio            = 8
+ MetaspaceSize            = 134217728 (128.0MB)
+ CompressedClassSpaceSize = 260046848 (248.0MB)
+ MaxMetaspaceSize         = 268435456 (256.0MB)
+ G1HeapRegionSize         = 1048576 (1.0MB)
+Heap Usage:
 G1 Heap:
-   regions  = 1248
-   capacity = 1308622848 (1248.0MB)
-   used     = 559231344 (533.3245697021484MB)
-   free     = 749391504 (714.6754302978516MB)
-   42.734340521005485% used
+ regions  = 1248
+ capacity = 1308622848 (1248.0MB)
+ used     = 559231344 (533.3245697021484MB)
+ free     = 749391504 (714.6754302978516MB)
+ 42.734340521005485% used
 G1 Young Generation:
 Eden Space:
-   regions  = 229
-   capacity = 403701760 (385.0MB)
-   used     = 240123904 (229.0MB)
-   free     = 163577856 (156.0MB)
-   59.48051948051948% used
+ regions  = 229
+ capacity = 403701760 (385.0MB)
+ used     = 240123904 (229.0MB)
+ free     = 163577856 (156.0MB)
+ 59.48051948051948% used
 Survivor Space:
-   regions  = 14
-   capacity = 14680064 (14.0MB)
-   used     = 14680064 (14.0MB)
-   free     = 0 (0.0MB)
-   100.0% used
+ regions  = 14
+ capacity = 14680064 (14.0MB)
+ used     = 14680064 (14.0MB)
+ free     = 0 (0.0MB)
+ 100.0% used
 G1 Old Generation:
-   regions  = 304
-   capacity = 365953024 (349.0MB)
-   used     = 303378800 (289.32456970214844MB)
-   free     = 62574224 (59.67543029785156MB)
-   82.90102283729182% used</p>
-
-<p>45296 interned Strings occupying 5894320 bytes.
-```
-我们从上面打印的信息也能看出来当前JVM使用了G1回收器</p>
+ regions  = 304
+ capacity = 365953024 (349.0MB)
+ used     = 303378800 (289.32456970214844MB)
+ free     = 62574224 (59.67543029785156MB)
+ 82.90102283729182% used
+45296 interned Strings occupying 5894320 bytes.
+</code></pre></div>    </div>
+    <p>我们从上面打印的信息也能看出来当前JVM使用了G1回收器</p>
+  </li>
+</ul>
 :ET
