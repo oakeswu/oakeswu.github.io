@@ -65,7 +65,7 @@ public interface Resource extends InputStreamSource {
 }
 ```
 我们先看下Resource接口，Resource接口定义了资源的一些属性的方法，我们使用XmlBeanFactory(Resource resource)构造出XmlBeanFactory对象，那我们看下代码使用ClassPathResource(String path)够造出Resource对象，那么我就看下ClassPathResouce类
-- ClassPathResouce
+# ClassPathResouce
 ```
 public class ClassPathResource extends AbstractFileResolvingResource {
     private final String path;
@@ -138,8 +138,8 @@ public abstract class ClassUtils {
     }
 }
 ```
-我们可以看到上面获取加载器的类型，因为双亲委派机制这里的类加载器应该是AppClassLoader。接下来我们来看下XmlBeanFactory如何构造的。
-- XmlBeanFactory
+我们可以看到上面获取加载器的类型，这里的类加载器应该是AppClassLoader。接下来我们来看下XmlBeanFactory如何构造的。
+# XmlBeanFactory
 ```
 public class XmlBeanFactory extends DefaultListableBeanFactory {
     private final XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this);
@@ -157,7 +157,7 @@ public class XmlBeanFactory extends DefaultListableBeanFactory {
 我们看到XmlBeanFactory构造函数首先通过super(parentBeanFactory)方法初始化从父类继承的全局属性，然后通过XmlBeanDefinitionReader对象调用loadBeanDefinitions方法。那我们先看下DefaultListableBeanFactory的类关系图
 ![image.png](/img/doc/springcode/spring2one.png)
 我们可以看到DefaultListableBeanFactory有很多上层的接口及类，我们这边暂时不去探究。我们接着往下走到XmlBeanDefinitionReader类
-- XmlBeanDefinitionReader
+# XmlBeanDefinitionReader
 ```
 public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
     protected final Log logger = LogFactory.getLog(getClass());
@@ -265,4 +265,4 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
     }
 }
 ```
-我们可以看到上面的步骤分为五步。loadBeanDefinitions方法分三步 1：对source进行encode封装，考虑到可能需要编码。2：通过sax读取xml文件方式构建一个inputSource。3:getValidationModeForResource获取xml的验证模式。4：加载xml文件，获得对应的Document。5：通过Document注册Bean信息。至此就完成了一个xmlFactoryBean的创建。
+我们可以看到上面的步骤分为五步。1：对source进行encode封装，考虑到可能需要编码。2：通过sax读取xml文件方式构建一个inputSource。3:getValidationModeForResource获取xml的验证模式。4：加载xml文件，获得对应的Document。5：通过Document注册Bean信息。至此就完成了一个xm文件到document的转换，这里转换使用的sax解析xml文件的方法，有兴趣的可以debug进去看看。
