@@ -1,0 +1,38 @@
+---
+layout:     post
+title:      "Mysql遍历大量数据"
+subtitle:   ""
+date:       2020-07-24
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Mysql
+---
+
+# 背景
+如果我们有一个包含一亿条数据的表需要取出所以数据，如何通过sql取出。我们能想到有四种方式，但是性能效率会有差别，我们此时进行一下分析，判断该如何选择并实践一下查询分析。
+# explain sql
+- 每次记录上次最后的id然后limit
+**explain select * from tablename where id > 500 order by id asc limit 500**
+![](http://upload-images.jianshu.io/upload_images/9082703-d82b82640fe14a57.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+type是range，key是primary主键，rows是2828209
+- 直接limit index,count
+**explain select * from tablename order by id asc limit 500,500**
+![](http://upload-images.jianshu.io/upload_images/9082703-7cffb964b3022c4c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+type是index，key是primary，rows是1000
+- 通过limit count offset size
+**explain select * from tablename order by id asc limit 500 offset 500**
+![](http://upload-images.jianshu.io/upload_images/9082703-b6f5483ad3337641.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+type是index，key是primary，rows是1000
+- 通过between and
+**explain select * from tablename where id between 53487 and 53986**
+![](http://upload-images.jianshu.io/upload_images/9082703-78736f8dca5c329b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+type是range，key是primary，rows是938
+# sql分析
+首先我们发现上面type有range和index区分，key都是primary，rows也有分别，那么我们就来直接看下这几种字段的含义。
+- type index
+我们看到上面第二和第三的两种方式的type都是index，官方的解释：The index join type is the same as ALL(https://dev.mysql.com/doc/refman/5.7/en/explain-output.html#jointype_all), except that the index tree is scanned.我们可以看出这种模式其实跟ALL的全表扫描差不多，只是可以去扫描索引顺序，应该是从第一个下标索引开始顺序扫描到起始位置。
+- type range
+我们看下第一种和between方式都是range类型，这里也看下官方的解释：Only rows that are in a given range are retrieved, using an index to select the rows。此时就能看出来range是通过索引先找到扫描的起始位置，然后再遍历获取。所以效率要比index好
+- rows
+rows的官方描述是The rows column indicates the number of rows MySQL believes it must examine to execute the query。表示执行query可能需要的行数，只是一个参考值。
