@@ -10,8 +10,9 @@ tags:
 ---
 
 # 背景
-上一节我们编写了一个Ioc的简单测试用例，通过xml文件配置bean文件并使用spring的BeanFactory去获取，我们这次就来解析下spring是如何加载xml中的配置并实现返回的。
-# Resource
+上一节我们编写了一个Ioc的简单测试用例，通过xml文件配置bean文件并使用spring的BeanFactory去获取，我们可以从很多地方查到流程其实是1：ClassPathResource将文件加载成Resource类。2：XmlBeanFactory通过Resource构造XmlBeanFactory。3：XmlBeanFactory调用继承而来的getBean方法获取Bean对象。我们先来看一下第一个步骤：
+
+#Resource
 ```
 public interface Resource extends InputStreamSource {
 
@@ -64,7 +65,8 @@ public interface Resource extends InputStreamSource {
     String getDescription();
 }
 ```
-我们先看下Resource接口，Resource接口定义了资源的一些属性的方法，我们使用XmlBeanFactory(Resource resource)构造出XmlBeanFactory对象，那我们看下代码使用ClassPathResource(String path)够造出Resource对象，那么我就看下ClassPathResouce类
+我们先看下Resource接口，Resource接口定义了资源的一些属性的方法。那我们看下使用ClassPathResource如何够造出Resource对象。
+
 # ClassPathResouce
 ```
 public class ClassPathResource extends AbstractFileResolvingResource {
@@ -80,6 +82,12 @@ public class ClassPathResource extends AbstractFileResolvingResource {
         this(path, (ClassLoader) null);
     }
 
+    public ClassPathResource(String path, @Nullable Class<?> clazz) {
+        Assert.notNull(path, "Path must not be null");
+        this.path = StringUtils.cleanPath(path);
+        this.clazz = clazz;
+    }
+
     public ClassPathResource(String path, @Nullable ClassLoader classLoader) {
         Assert.notNull(path, "Path must not be null");
         String pathToUse = StringUtils.cleanPath(path);
@@ -89,6 +97,15 @@ public class ClassPathResource extends AbstractFileResolvingResource {
         this.path = pathToUse;
         this.classLoader = (classLoader != null ? classLoader : ClassUtils.getDefaultClassLoader());
     }
+
+    @Deprecated
+    protected ClassPathResource(String path, @Nullable ClassLoader classLoader, @Nullable Class<?> clazz) {
+        this.path = StringUtils.cleanPath(path);
+        this.classLoader = classLoader;
+        this.clazz = clazz;
+    }
+
+    
     //通过复写InputStreamSource接口的getInputStream方法获取资源的InputStream流
     @Override
     public InputStream getInputStream() throws IOException {
@@ -107,9 +124,43 @@ public class ClassPathResource extends AbstractFileResolvingResource {
         }
         return is;
     }
+    
+    //获取当前文件的URL
+    @Override
+    public URL getURL() throws IOException {
+        URL url = resolveURL();
+        if (url == null) {
+            throw new FileNotFoundException(getDescription() + " cannot be resolved to URL because it does not exist");
+        }
+        return url;
+    }
+  
+    @Nullable
+    protected URL resolveURL() {
+        if (this.clazz != null) {
+            return this.clazz.getResource(this.path);
+        }
+        else if (this.classLoader != null) {
+            return this.classLoader.getResource(this.path);
+        }
+        else {
+            return ClassLoader.getSystemResource(this.path);
+        }
+    }
+    
+    //根据相对路径再创建一个Resource
+    @Override
+    public Resource createRelative(String relativePath) {
+        String pathToUse = StringUtils.applyRelativePath(this.path, relativePath);
+        return (this.clazz != null ? new ClassPathResource(pathToUse, this.clazz) :
+                new ClassPathResource(pathToUse, this.classLoader));
+    }
 }
 ```
-我们这边看到ClassPathResource类的构造函数通过构造函数将对象中的path和classLoader赋值，此时path是我们指定的beanFactoryTest.xml，classLoader通过classUtils.getDefaultClassLoader()方法获得，我们这边简单看下这个方法
+我们可以看到ClassPathResource有四个构造函数，最后都是给全局变量path，classLoader，clazz赋值。那我们看下xml加载的流程
+1：StringUtils.cleanPath标准化路径
+2：对path和classLoader赋值，其中classLoader需要ClassUtils.getDefaultClassLoader()获取
+# ClassUtils 
 ```
 public abstract class ClassUtils {
     @Nullable
@@ -138,131 +189,4 @@ public abstract class ClassUtils {
     }
 }
 ```
-我们可以看到上面获取加载器的类型，这里的类加载器应该是AppClassLoader。接下来我们来看下XmlBeanFactory如何构造的。
-# XmlBeanFactory
-```
-public class XmlBeanFactory extends DefaultListableBeanFactory {
-    private final XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this);
-
-    public XmlBeanFactory(Resource resource) throws BeansException {
-        this(resource, null);
-    }
-
-    public XmlBeanFactory(Resource resource, BeanFactory parentBeanFactory) throws BeansException {
-        super(parentBeanFactory);
-        this.reader.loadBeanDefinitions(resource);
-    }
-}
-```
-我们看到XmlBeanFactory构造函数首先通过super(parentBeanFactory)方法初始化从父类继承的全局属性，然后通过XmlBeanDefinitionReader对象调用loadBeanDefinitions方法。那我们先看下DefaultListableBeanFactory的类关系图
-![image.png](/img/doc/springcode/spring2one.png)
-我们可以看到DefaultListableBeanFactory有很多上层的接口及类，我们这边暂时不去探究。我们接着往下走到XmlBeanDefinitionReader类
-# XmlBeanDefinitionReader
-```
-public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
-    protected final Log logger = LogFactory.getLog(getClass());
-
-    private final ThreadLocal<Set<EncodedResource>> resourcesCurrentlyBeingLoaded =
-            new NamedThreadLocal<>("XML bean definition resources currently being loaded");
-
-    private DocumentLoader documentLoader = new DefaultDocumentLoader();
-
-    private ErrorHandler errorHandler = new SimpleSaxErrorHandler(logger);
-    
-    @Override
-    public int loadBeanDefinitions(Resource resource) throws BeanDefinitionStoreException {
-        return loadBeanDefinitions(new EncodedResource(resource));
-    }
-
-    public int loadBeanDefinitions(EncodedResource encodedResource) throws BeanDefinitionStoreException {
-        Assert.notNull(encodedResource, "EncodedResource must not be null");
-        if (logger.isInfoEnabled()) {
-            logger.info("Loading XML bean definitions from " + encodedResource);
-        }
-
-        Set<EncodedResource> currentResources = this.resourcesCurrentlyBeingLoaded.get();
-        if (currentResources == null) {
-            currentResources = new HashSet<>(4);
-            this.resourcesCurrentlyBeingLoaded.set(currentResources);
-        }
-        if (!currentResources.add(encodedResource)) {
-            throw new BeanDefinitionStoreException(
-                    "Detected cyclic loading of " + encodedResource + " - check your import definitions!");
-        }
-        try {
-            InputStream inputStream = encodedResource.getResource().getInputStream();
-            try {
-                InputSource inputSource = new InputSource(inputStream);
-                if (encodedResource.getEncoding() != null) {
-                    inputSource.setEncoding(encodedResource.getEncoding());
-                }
-                return doLoadBeanDefinitions(inputSource, encodedResource.getResource());
-            }
-            finally {
-                inputStream.close();
-            }
-        }
-        catch (IOException ex) {
-            throw new BeanDefinitionStoreException(
-                    "IOException parsing XML document from " + encodedResource.getResource(), ex);
-        }
-        finally {
-            currentResources.remove(encodedResource);
-            if (currentResources.isEmpty()) {
-                this.resourcesCurrentlyBeingLoaded.remove();
-            }
-        }
-    }
-
-    protected int doLoadBeanDefinitions(InputSource inputSource, Resource resource)
-            throws BeanDefinitionStoreException {
-        try {
-            Document doc = doLoadDocument(inputSource, resource);
-            return registerBeanDefinitions(doc, resource);
-        }
-        catch (BeanDefinitionStoreException ex) {
-            throw ex;
-        }
-        catch (SAXParseException ex) {
-            throw new XmlBeanDefinitionStoreException(resource.getDescription(),
-                    "Line " + ex.getLineNumber() + " in XML document from " + resource + " is invalid", ex);
-        }
-        catch (SAXException ex) {
-            throw new XmlBeanDefinitionStoreException(resource.getDescription(),
-                    "XML document from " + resource + " is invalid", ex);
-        }
-        catch (ParserConfigurationException ex) {
-            throw new BeanDefinitionStoreException(resource.getDescription(),
-                    "Parser configuration exception parsing XML from " + resource, ex);
-        }
-        catch (IOException ex) {
-            throw new BeanDefinitionStoreException(resource.getDescription(),
-                    "IOException parsing XML document from " + resource, ex);
-        }
-        catch (Throwable ex) {
-            throw new BeanDefinitionStoreException(resource.getDescription(),
-                    "Unexpected exception parsing XML document from " + resource, ex);
-        }
-    }
-
-    protected Document doLoadDocument(InputSource inputSource, Resource resource) throws Exception {
-        return this.documentLoader.loadDocument(inputSource, getEntityResolver(), this.errorHandler,
-                getValidationModeForResource(resource), isNamespaceAware());
-    }
-    //获取一个Resolver
-    protected EntityResolver getEntityResolver() {
-        if (this.entityResolver == null) {
-            // Determine default EntityResolver to use.
-            ResourceLoader resourceLoader = getResourceLoader();
-            if (resourceLoader != null) {
-                this.entityResolver = new ResourceEntityResolver(resourceLoader);
-            }
-            else {
-                this.entityResolver = new DelegatingEntityResolver(getBeanClassLoader());
-            }
-        }
-        return this.entityResolver;
-    }
-}
-```
-我们可以看到上面的步骤分为五步。1：对source进行encode封装，考虑到可能需要编码。2：通过sax读取xml文件方式构建一个inputSource。3:getValidationModeForResource获取xml的验证模式。4：加载xml文件，获得对应的Document。5：通过Document注册Bean信息。至此就完成了一个xm文件到document的转换，这里转换使用的sax解析xml文件的方法，有兴趣的可以debug进去看看。
+我们可以看到上面获取加载器的类型，这里的类加载器应该是AppClassLoader。
