@@ -1,0 +1,33 @@
+---
+layout:     post
+title:      "Mysql架构"
+subtitle:   ""
+date:       2020-08-18
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Mysql
+---
+**本文参考[MySQL Architecture and Components](https://lalitvc.wordpress.com/2016/11/03/mysql-architecture-and-components/)，[Mysql那些事](https://zhuanlan.zhihu.com/p/95155575)，[MySQL逻辑架构及工作流程](https://blog.csdn.net/z_ryan/article/details/82260663)，[MySQL高级特性四：查询缓存](https://blog.csdn.net/yongqi_wang/article/details/86674088)**
+
+#背景
+之前主要学习了通过explain来查看sql执行的分析，这期我们来看下Mysql架构，在以后的学习或者问题时可以结合架构来思考。
+
+# 架构部分
+![架构图](http://upload-images.jianshu.io/upload_images/9082703-493d0b08b781a6c6.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+1.client层
+  - 连接MySQL服务器的实用程序等，例如JDBC，NET，ODBC
+
+2.service层
+  - 连接器：用于管理连接线程。当客户端开始尝试连接Mysql时，Mysql会从线程池分配一个线程来连接。
+  - 查询缓存：执行过的语句与结果会以K-V形式保存在查询缓存中，查询请求如果命中缓存会直接返回，查询缓存系统会跟踪缓存涉及的每个表，如果这些表发生变化，那么和这个表相关的所有的缓存数据都将失效。
+  - 分析解析器：如果没有命中查询缓存，将会进入到分析器，先开始做词法分析解析出表名，函数，关键字等，然后开始校验语法分析，校验语法的正确性，并且**用户身份验证**也会在这个步骤。
+  - 优化器：优化器会根据存储引擎来创建一个更高效的执行计划，譬如经过分析器，SQL有多张表关联或者有多个索引的时候，优化器是根据索引来决定表的顺序与条件顺序。并且包含**用户身份的权限检测**
+  - 执行器：执行器主要是根据优化器优化的sql执行计划跟存储引擎api对表扫描，返回数据结果。
+
+3.存储引擎
+  - 存储引擎是管理具体的物理文件，负责slq语句的执行和从数据文件中获取数据。不同引擎又不同的执行功能。
+
+ 4.共享子系统
+  - 共享子系统包含着一些mysql子系统中共享的一些日志管理，存储管理，缓存管理等

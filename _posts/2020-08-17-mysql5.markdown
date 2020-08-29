@@ -6,7 +6,7 @@ date:       2020-08-24
 author:     "OakesWu"
 header-img: "img/post-bg-2015.jpg"
 tags:
-    - 计算机网络
+    - Mysql
 ---
 **本文参考[MySQL Architecture and Components](https://lalitvc.wordpress.com/2016/11/03/mysql-architecture-and-components/)，[Mysql那些事](https://zhuanlan.zhihu.com/p/95155575)，[MySQL逻辑架构及工作流程](https://blog.csdn.net/z_ryan/article/details/82260663)，[MySQL高级特性四：查询缓存](https://blog.csdn.net/yongqi_wang/article/details/86674088)**
 
