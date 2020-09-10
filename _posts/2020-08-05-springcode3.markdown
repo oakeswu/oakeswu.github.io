@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Spring源码(三) -- xml文件解析"
+title:      "Spring源码(三) -- Xml文件转换Document"
 subtitle:   ""
 date:       2020-08-05
 author:     "OakesWu"
@@ -10,7 +10,7 @@ tags:
 ---
 
 # 背景
-我们上一节探究了ClassPathResource通过输入Path构造出一个Resource对象，我们这一节继续学习XmlBeanFactory如何解析Resource，将Resource转化成一个BeanDefinition。
+我们上一节探究了ClassPathResource通过输入Path构造出一个Resource对象，我们这一节继续学习XmlBeanFactory如何解析Resource，将Resource转化成一个Document。
 
 # XmlBeanFactory
 ```

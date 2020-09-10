@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Spring源码(二) -- xml文件加载"
+title:      "Spring源码(二) -- Xml文件封装成Resource"
 subtitle:   ""
 date:       2020-07-18
 author:     "OakesWu"
