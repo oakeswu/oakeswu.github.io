@@ -1,0 +1,135 @@
+---
+layout:     post
+title:      "排序(一) -- 初级排序算法"
+subtitle:   ""
+date:       2020-09-11
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - 算法
+---
+
+#背景
+排序算法算是平时业务场景中可能会用到的算法，刚好抽时间完整回顾下常用的排序算法。最开始就先从好理解，但是时间复杂度会比较高的初级算法尝试。
+
+#工具类
+```
+/**
+ * 工具类
+ */
+public class SortUtil {
+    //验证是否需要排序
+    public static boolean safeCheck(int[] a) {
+        if (a == null || a.length < 2) {
+            return false;
+        }
+        return true;
+    }
+    
+    //交换数据
+    public static void exchange(int[] a, int i, int j) {
+        int swap = a[i];
+        a[i] = a[j];
+        a[j] = swap;
+    }
+}
+```
+介绍完后续代码中会使用到的工具类，下面就看下算法。
+# 具体算法
+- 选择排序
+```
+/**
+ * 选择排序
+ *
+ * 找到数组中最小的值，和数组第一个交换,
+ * 找到数组接下来第二小的元素，然后和第二个交换,
+ * 以此类推
+ */
+public class ChooseSort {
+
+    public static int[] sort(int[] array) {
+       if (!SortUtil.safeCheck(array)) {
+           return array;
+       }
+       int min;
+       for (int i= 0; i < array.length; i++) {
+           min = i;
+           for (int j = i + 1; j < array.length; j++) {
+               if (array[min] > array[j]) {
+                   min = j;
+               }
+           }
+          SortUtil.exchange(array, i, min);
+       }
+       return array;
+    }
+}
+```
+- 插入排序
+```
+/**
+ * 插入排序
+ *
+ * 找到数组中第二个数，和数组第一个判断,
+ * 找到数组第三个数，然后和之前两个判断,
+ * 以此类推
+ */
+public class InsertSort {
+    public static int[] sort(int[] array) {
+        if (!SortUtil.safeCheck(array)) {
+            return array;
+        }
+        for (int i = 0; i < array.length - 1; i++) {
+            int nextIndex = i + 1;
+            for (int j = i; j >= 0; j--) {
+                if (array[j] > array[nextIndex]) {
+                    nextIndex = j;
+                    SortUtil.exchange(array, j, nextIndex);
+                } else {
+                    break;
+                }
+            }
+        }
+        return array;
+    }
+}
+```
+- 冒泡排序
+```
+/**
+ * 冒泡排序
+ *
+ * 第一轮从开始到最后两两比较，将最大的值类似于冒泡一样挤到最后
+ * 第二轮从开始到倒数第二位两两比较，将最大的值类似于冒泡一样挤到最倒数第二位
+ * 以此类推
+ */
+public class BubbleSort {
+    public static int[] sort(int[] array) {
+        if (!SortUtil.safeCheck(array)) {
+            return array;
+        }
+
+        for (int i =0; i < array.length; i++) {
+            for (int j = 0; j < array.length - i - 1; j++) {
+                if (array[j] > array[j + 1]) {
+                    SortUtil.exchange(array, j, j + 1);
+                }
+            }
+        }
+        return array;
+    }
+}
+```
+- 测试代码
+```
+public class SortTest {
+    public static void main(String[] args) {
+        int[] array = new int[] {3,25,88,299,23,88,-1};
+        System.out.println(Arrays.toString(ChooseSort.sort(array)));
+        System.out.println(Arrays.toString(InsertSort.sort(array)));
+        System.out.println(Arrays.toString(BubbleSort.sort(array)));
+    }
+}
+```
+# 总结
+为了展示清晰一点所以代码并没有使用策略等模式，而是每个算法都有各自的实现和注释，初级排序算法可以看见里面都是用了两次for循环，所以上面三种的平均时间复杂度都是N的平方，后面可以学习到时间复杂度降低一些的算法。
