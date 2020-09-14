@@ -37,6 +37,7 @@ public class SortUtil {
 介绍完后续代码中会使用到的工具类，下面就看下算法。
 # 具体算法
 - 选择排序
+
 ```
 /**
  * 找到数组中最小的值，和数组第一个交换,
@@ -63,6 +64,7 @@ public class ChooseSort {
 }
 ```
 - 插入排序
+
 ```
 /**
  * 找到数组中第二个数，和数组第一个判断,
@@ -90,6 +92,7 @@ public class InsertSort {
 }
 ```
 - 冒泡排序
+
 ```
 /**
  * 第一轮从开始到最后两两比较，将最大的值类似于冒泡一样挤到最后
@@ -113,6 +116,7 @@ public class BubbleSort {
 }
 ```
 - 测试代码
+
 ```
 public class SortTest {
     public static void main(String[] args) {
