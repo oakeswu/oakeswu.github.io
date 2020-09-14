@@ -37,7 +37,6 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
         Element root = doc.getDocumentElement();
         doRegisterBeanDefinitions(root);
     }
-
     protected void doRegisterBeanDefinitions(Element root) {
         BeanDefinitionParserDelegate parent = this.delegate;
         this.delegate = createDelegate(getReaderContext(), root, parent);
@@ -64,8 +63,6 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 
         this.delegate = parent;
     }
-
-
     protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
         if (delegate.isDefaultNamespace(root)) {
             NodeList nl = root.getChildNodes();
@@ -88,7 +85,6 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
             delegate.parseCustomElement(root);
         }
     }
-
     private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
         if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) {
             importBeanDefinitionResource(ele);
@@ -104,7 +100,6 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
             doRegisterBeanDefinitions(ele);
         }
     }
-
     protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
         BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
         if (bdHolder != null) {
@@ -122,7 +117,6 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
             getReaderContext().fireComponentRegistered(new BeanComponentDefinition(bdHolder));
         }
     }
-
     protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
 		BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
 		if (bdHolder != null) {
@@ -146,12 +140,12 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 - profile也是beans根节点里面的配置，如果是根节点需要判断，profile可以百度了解一下。
 - 开始parseBeanDefinitions方法，解析具体的节点配置。我们这里只看下常用Element里面的Bean的解析。
 - processBeanDefinition里面就能看出BeanDefinition对象和标签节点的关系。将delegate解析到的BeanDefinitionHolder放入实现过BeanDefinitionRegistry接口里面的beanDefinitionMap
+
 ```
 public class BeanDefinitionParserDelegate {
     public BeanDefinitionHolder decorateBeanDefinitionIfRequired(Element ele, BeanDefinitionHolder originalDef) {
 		return decorateBeanDefinitionIfRequired(ele, originalDef, null);
 	}
-
     public BeanDefinitionHolder decorateBeanDefinitionIfRequired(
 			Element ele, BeanDefinitionHolder originalDef, @Nullable BeanDefinition containingBd) {
 

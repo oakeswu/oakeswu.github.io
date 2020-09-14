@@ -39,14 +39,11 @@ public class SortUtil {
 - 选择排序
 ```
 /**
- * 选择排序
- *
  * 找到数组中最小的值，和数组第一个交换,
  * 找到数组接下来第二小的元素，然后和第二个交换,
  * 以此类推
  */
 public class ChooseSort {
-
     public static int[] sort(int[] array) {
        if (!SortUtil.safeCheck(array)) {
            return array;
@@ -68,8 +65,6 @@ public class ChooseSort {
 - 插入排序
 ```
 /**
- * 插入排序
- *
  * 找到数组中第二个数，和数组第一个判断,
  * 找到数组第三个数，然后和之前两个判断,
  * 以此类推
@@ -83,8 +78,8 @@ public class InsertSort {
             int nextIndex = i + 1;
             for (int j = i; j >= 0; j--) {
                 if (array[j] > array[nextIndex]) {
-                    nextIndex = j;
                     SortUtil.exchange(array, j, nextIndex);
+					nextIndex = j;
                 } else {
                     break;
                 }
@@ -97,8 +92,6 @@ public class InsertSort {
 - 冒泡排序
 ```
 /**
- * 冒泡排序
- *
  * 第一轮从开始到最后两两比较，将最大的值类似于冒泡一样挤到最后
  * 第二轮从开始到倒数第二位两两比较，将最大的值类似于冒泡一样挤到最倒数第二位
  * 以此类推
@@ -108,7 +101,6 @@ public class BubbleSort {
         if (!SortUtil.safeCheck(array)) {
             return array;
         }
-
         for (int i =0; i < array.length; i++) {
             for (int j = 0; j < array.length - i - 1; j++) {
                 if (array[j] > array[j + 1]) {
@@ -126,8 +118,8 @@ public class SortTest {
     public static void main(String[] args) {
         int[] array = new int[] {3,25,88,299,23,88,-1};
         System.out.println(Arrays.toString(ChooseSort.sort(array)));
-        System.out.println(Arrays.toString(InsertSort.sort(array)));
-        System.out.println(Arrays.toString(BubbleSort.sort(array)));
+        //System.out.println(Arrays.toString(InsertSort.sort(array)));
+        //System.out.println(Arrays.toString(BubbleSort.sort(array)));
     }
 }
 ```
