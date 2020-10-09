@@ -6,7 +6,7 @@ date:       2020-09-29
 author:     "OakesWu"
 header-img: "img/post-bg-2015.jpg"
 tags:
-    - 操作系统
+    - SpringCloud
 ---
 
 **本文学习自[Microservices](https://martinfowler.com/articles/microservices.html)，《Sping Cloud原理与实战》**
