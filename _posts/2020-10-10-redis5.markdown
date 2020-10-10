@@ -1,0 +1,119 @@
+---
+layout:     post
+title:      "Redis(五) -- 数据存储"
+subtitle:   ""
+date:       2020-10-10
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Redis
+---
+
+**本文主要参考[redis各类型数据存储分析](https://www.cnblogs.com/weknow619/p/10464139.html)，[Redis-基本数据类型与内部存储结构](https://www.jianshu.com/p/f09480c05e42)**
+# 背景
+我们在之前的文章中介绍了Redis主要有五种数据结构，分别是String、Hash、List、Set、Sorted Set，并且大致说了下各自底层的数据结构，这一篇就好好学习下这五种数据结构的存储。
+
+# Redis存储对象
+![](http://upload-images.jianshu.io/upload_images/9082703-5a1c25de0a9b4050.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+Redis使用**dictEntry**对象来存储一个k-v值，我们来看下dictEntry的三个属性值
+- key：redis的key是以SDS（简单动态字符串）存储。
+- val：reids的val是以redisObject对象存储，redisObject里面包含多个属性，最重要的是type和encoding，type表示value对象是何种数据类型，encoding表示不同数据类型在redis内部的存储方式。
+![](http://upload-images.jianshu.io/upload_images/9082703-fdb3b363f8e6103c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](http://upload-images.jianshu.io/upload_images/9082703-bc27237cc2d6b63c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+Redis的内存分配器默认是jemalloc，可以将内存空间划分为小，大，巨大三个范围，每个范围又划分了许多小的内存块单位，当Redis存储数据的时候会选择最合适的内存块进行存储。
+
+# String
+字符串对象的底层可以是int，raw，embstr。
+- int：8个字节的长整数，在一定条件下会转化为raw编码字符串对象。
+- raw：大于39个字节的字符串，简单动态字符串（SDS），有点类似于List<String>，长度动态可变
+```
+struct sdshdr {
+    // buf 中已占用空间的长度
+    int len;
+    // buf 中剩余可用空间的长度
+    int free;
+    // 数据空间
+    char buf[]; // ’\0’空字符结尾
+};
+```
+- embstr：小于等于39个字节的字符串，在一定条件下也会转化成raw编码字符串对象，通过调用一次内存分配函数来分配一块连续的空间。
+String的常用命令的时间复杂度为O(1)，读写一样快，当遇到Incr，decr等操作时会转成数据型进行计算。
+
+# List
+List对象的底层是quicklist，由ziplist和linkedlist组成的快速列表，所以list支持两端插入和弹出，lpush，rpush，lpop，rpop等命令。可以获得指定位置（或范围）的元素，可以充当数组、队列、栈等。
+ ```
+typedef struct listNode {
+     // 前置节点
+    struct listNode *prev;
+    // 后置节点
+    struct listNode *next;
+    // 节点的值
+    void *value;
+ } listNode;
+
+ typedef struct list {
+     // 表头节点
+    listNode *head;
+    // 表尾节点
+    listNode *tail;
+    // 节点值复制函数
+    void *(*dup)(void *ptr);
+    // 节点值释放函数
+    void (*free)(void *ptr);
+     // 节点值对比函数
+    int (*match)(void *ptr, void *key);
+     // 链表所包含的节点数量
+    unsigned long len;
+ } list;
+```
+- linkedlist：结构有点类似java的linkedlist，列表在增删操作时时间复杂度较低。
+- ziplist：当一个列表键只包含少量列表项，且是小整数值或长度比较短的字符串时，redis会用ziplist代替linkedlist，可以节省内存空间，但是增删时复杂度较高。
+- quickList：  zipList 和 linkedList 的混合体。它将 linkedList 按段切分，每一段使用 zipList 来紧凑存储，多个 zipList 之间使用双向指针串接起来。因为链表的附加空间相对太高，prev 和 next 指针就要占去 16 个字节 (64bit 系统的指针是 8 个字节)，另外每个节点的内存都是单独分配，会加剧内存的碎片化，影响内存管理效率。
+![](https://upload-images.jianshu.io/upload_images/9082703-e1e26271ff0cbc74.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+# Hash
+Hash对象底层实现是ziplist或者hashtable，当Hash对象满足hash元素数量小于512个并且所有键值对的键和值字符串长度都小于64字节时会使用ziplist，否则使用hashtable.
+- hashtable：hashtable有点类似java中hashmap，当产生哈希冲突时使用链地址法来解决键冲突。
+![](https://upload-images.jianshu.io/upload_images/9082703-99b115e5e491c17c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+# Set
+Set的底层实现是intset或者hashtable
+- intset：当一个集合只含有整数，并且元素不多时会使用intset存储，是一个无序set。
+```
+typedef struct intset {
+    // 编码方式
+    uint32_t encoding;
+    // 集合包含的元素数量
+    uint32_t length;
+    // 保存元素的数组
+    int8_t contents[];
+} intset;
+```
+# Sorted Set
+Sorted Set也叫ZSet，底层实现使用ziplist或者skiplist。
+- skiplist：跳跃表是很常见的一个提高查询时间复杂度的结构，可以将平均时间复杂度降到logN，譬如在lucene索引中也使用到，当ZSet元素数量比较多或者成员是比较长的字符串时会使用skiplist作为底层实现。
+```
+typedef struct zskiplist {
+     // 表头节点和表尾节点
+    struct zskiplistNode *header, *tail;
+    // 表中节点的数量
+    unsigned long length;
+    // 表中层数最大的节点的层数
+    int level;
+ } zskiplist;
+typedef struct zskiplistNode {
+    // 成员对象
+    robj *obj;
+    // 分值
+    double score;
+     // 后退指针
+    struct zskiplistNode *backward;
+    // 层
+    struct zskiplistLevel {
+        // 前进指针
+        struct zskiplistNode *forward;
+         // 跨度---前进指针所指向节点与当前节点的距离
+        unsigned int span;
+    } level[];
+} zskiplistNode;
+```

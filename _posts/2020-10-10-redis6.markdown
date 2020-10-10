@@ -1,0 +1,30 @@
+---
+layout:     post
+title:      "Redis(六) -- 内存回收"
+subtitle:   ""
+date:       2020-10-10
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Redis
+---
+
+**本文主要参考[说说Redis的回收策略](https://www.javanav.com/interview/457c525100b0427fb49b0a8494fc0233.html)，[Redis的内存回收机制](https://www.cnblogs.com/gaoyuechen/p/9957405.html)**
+
+
+# 背景
+我们之前学习了redis的持久化，数据存储等内容，这期学习一下键的删除以及对象数据的回收。主要体现在过期键的处理和内存溢出控制策略
+
+# 过期键的删除
+- 定时删除：这是我们在使用过程中常用到的一种方式，在设置键值的时候就指定下过期时间，redis内部会给key设置一个定时器，到时间之后执行删除键的操作。
+- 惰性删除：不主动删除，当client访问到key时会先对key进行是否超时的判断，如果过期则删除。
+- 定期删除：Redis在Master的后台，按照算法每隔一段时间获取key进行检查。默认每秒10次随机检查20个键，如果超过25%的键过期则继续循环执行（当前次不算），否则返回。
+
+# 内存溢出控制策略
+内存溢出控制策略主要包括六中策略，其中volatile是针对已设置过期时间的数据集，allkeys针对全数据
+- volatile-lru：从已设置过期时间的数据集(server.db[i].expires)中，淘汰最近最少使用的数据。
+- volatile-ttl：从已设置过期时间的数据集(server.db[i].expires)中，淘汰最早会过期的数据。
+- volatile-random：从已设置过期时间的数据集(server.db[i].expires)中，随机淘汰数据。
+- allkeys-lru：从数据集(server.db[i].dict)中，淘汰最近最少使用的数据。
+- allkeys-random：从数据集(server.db[i].dict)中，随机淘汰数据。
+- noenviction：Redis 的默认策略，不回收数据，当达到最大内存时，新增数据返回 error。
