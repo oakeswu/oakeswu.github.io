@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Mysql慢查询优化"
+title:      "Mysql(二) -- 慢查询优化"
 subtitle:   ""
 date:       2020-05-09
 author:     "OakesWu"

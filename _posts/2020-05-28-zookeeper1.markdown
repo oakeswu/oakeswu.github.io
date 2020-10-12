@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Zookeeper简介"
+title:      "Zookeeper(一) -- Zookeeper简介"
 subtitle:   ""
 date:       2020-05-25
 author:     "OakesWu"
@@ -9,7 +9,7 @@ tags:
     - Zookeeper
 ---
 
-参考（[Apache Zookeeper](https://zookeeper.apache.org/doc/current/zookeeperOver.html)）
+**本文参考[Apache Zookeeper](https://zookeeper.apache.org/doc/current/zookeeperOver.html)**
 
 # 什么是zookeeper
 zookeeper是一个分布式系统的分布式协调服务，分布式应用程序可以根据它来实现同步，配置维护以及组命名等更高级的服务，有点类似于ES封装好底层代码方便用户在此基础上更方便快捷的构建自己所需的应用服务。

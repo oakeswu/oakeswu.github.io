@@ -1,0 +1,97 @@
+---
+layout:     post
+title:      "Zookeeper(二) -- Zookeeper的安装与测试"
+subtitle:   ""
+date:       2020-10-12
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Zookeeper
+---
+
+**本文参考[Zookeeper安装配置](https://www.cnblogs.com/crazylqy/p/7119089.html)，[Zookeeper 在Windows下的安装过程及测试](https://blog.csdn.net/qiunian144084/article/details/79192819)**
+# 背景
+由于工作电脑是Windows，所以我们这一节是在Windows上面进行Zookeeper的安装，后面有机会可以申请机器进行centos上的配置，如果读者是linux可以直接参考上面第一篇文章配置即可。
+
+# 单机配置
+- 在[Zookeeper](https://zookeeper.apache.org/releases.html)官网上直接下载Zookeeper包，本文下载的是3.4.14版本。
+- 使用7-zip将Zookeeper的gz包解压到你自己的目录，本文放在E:\zookeeper。
+- 在E:\zookeeper下新建一个data文件，然后在zookeeper-3.4.14中conf文件里面的复制zoo_sample.cfg生成zoo.cfg文件
+- 将zoo.cfg的dataDir更改为E:\\zookeeper\\data并加上dataLogDir=E:\\zookeeper\\log
+- 执行bin目录下的zkServer.cmd启动服务即可
+
+我们这里需要说明一下zoo.cfg里长配的参数含义
+- tickTime：基本时间单元，作为Zookeeper服务器之间或客户端与服务器之间维持心跳的时间间隔单位，互相每隔tickTime时间就会发送一个心跳，最小 的session过期时间为2倍tickTime。
+- initLimit：允许follower(相对于Leaderer言的“客户端”)连接并同步到Leader的初始化连接时间，以tickTime为单位。当初始化连接时间超过该值，则表示连接失败。
+- syncLimit：Leader与Follower之间发送消息时，请求和应答时间长度。如果follower在设置时间内不能与leader通信，那么此follower将会被丢弃。
+- dataDir：存储数据快照的地址。
+- dataLogDir：存储zk日志的地方
+- clientPort：监听客户端连接的端口。
+
+我们看下代码
+```
+public class App {
+    public static void main(String[] args) {
+        try {
+            ZooKeeper zk = new ZooKeeper("127.0.0.1:2181", 30000, new TestWatcher());
+            String node = "/node1";
+            Stat stat = zk.exists(node, false);
+            if (stat == null) {
+                String createResult = zk.create(node, "test".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                System.out.println(createResult);
+            }
+            byte[] bytes = zk.getData(node, false, stat);
+            System.out.println(new String(bytes));
+            zk.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+}
+
+public class TestWatcher implements Watcher {
+
+    public void process(WatchedEvent watchedEvent) {
+        System.out.println("path:" + watchedEvent.getPath());
+        System.out.println("type:" + watchedEvent.getType());
+        System.out.println("state:" + watchedEvent.getState());
+    }
+}
+```
+当然写代码之前一定先加上zk的pom引用，并且保证版本一致，所以我们这个的pom版本是3.4.14。如下所示
+```
+<dependencies>
+      <dependency>
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>zookeeper</artifactId>
+          <version>3.4.14</version>
+      </dependency>
+</dependencies>
+```
+然后执行代码并且查看输出信息即可。
+
+# 伪集群配置
+伪集群模式就是在一台服务器上起多个zk服务，仿佛建了一个集群一样，我们这里起三个服务。
+- 首先新建data1，log1，data2，log2，data3，log3六个文件夹，并且分别在data1，data2，data3中创建一个myid的文件，每个文件里面写下序号1，2，3。譬如data1里面的myid文件写1，data2里面的myid文件写2。
+- 然后复制zoo.cfg文件创建zoo1.cfg，zoo2.cfg，zoo3.cfg，并且将各自clientPort改成2181,2182,2183。并且都加上如下配置：
+server.1=localhost:2287:3387
+server.2=localhost:2288:3388
+server.3=localhost:2289:3389
+- 接着复制zkServer.cmd创建zkServer-1.cmd，zkServer-2.cmd，zkServer-3.cmd，并分别在里面加上set ZOOCFG=..\conf\zoo1.cfg，set ZOOCFG=..\conf\zoo2.cfg，set ZOOCFG=..\conf\zoo3.cfg即可。
+- 此时我们启动刚新建的server服务就可以。
+
+这里需要讲解一下新加的配置
+-  server.A=B：C：D
+A：其中 A 是一个数字，表示这个是服务器的编号；
+B：是这个服务器的 ip 地址；
+C：Leader选举的端口；
+D：Zookeeper服务器之间的通信端口。
+- myid
+myid就是我们刚才在data文件夹下新建的文件，Zookeeper 启动时会读取这个文件，拿到里面的数据与 zoo.cfg 里面的配置信息比较从而判断到底是那个 server。
+
+代码层面只需要将zk的构造函数改成下面就阔以了、
+```
+ZooKeeper zk = new ZooKeeper("127.0.0.1:2181,127.0.0.1:2182,127.0.0.1:2183", 30000, new TestWatcher());
+```
+
