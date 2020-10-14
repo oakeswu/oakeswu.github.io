@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "CAP理论"
+title:      "分布式(一) -- CAP理论"
 subtitle:   ""
 date:       2020-05-23
 author:     "OakesWu"
