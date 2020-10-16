@@ -1,0 +1,211 @@
+---
+layout:     post
+title:      "LocalDate的使用及解析"
+subtitle:   ""
+date:       2020-10-16
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - 工具类
+---
+
+# 背景
+最近刚做了一个用户签到获取奖励的需求，因为是Trip端即海外端，所以会需要考虑到时区的问题，又用到了平时配置中会经常使用到的关于生效时间问题的LocalDate和LocalDateTime类，刚好最近就好好整理一下。按照惯例，我们还是从学源码开始，然后写写例子实践一下，最后总结。
+
+#  LocalDate
+
+```
+public final class LocalDate
+            implements Temporal, TemporalAdjuster, ChronoLocalDate, Serializable {
+    
+    //年月日    
+    private final int year;   
+    private final short month;   
+    private final short day;
+    
+    //常用的一个方法，获取当前默认时区当前时间的LocalDate对象，有兴趣的同学可以走进去看看Clock代码
+    public static LocalDate now() {
+        return now(Clock.systemDefaultZone());
+    }
+    //获取指定时区当前时间的LocalDate对象
+    public static LocalDate now(ZoneId zone) {
+        return now(Clock.system(zone));
+    }
+    //从这里可以看出根据时区获取就是先获取当前格林威治时间now，然后加上时区的偏移量
+    public static LocalDate now(Clock clock) {
+        Objects.requireNonNull(clock, "clock");
+        final Instant now = clock.instant(); 
+        ZoneOffset offset = clock.getZone().getRules().getOffset(now);
+        long epochSec = now.getEpochSecond() + offset.getTotalSeconds(); 
+        long epochDay = Math.floorDiv(epochSec, SECONDS_PER_DAY);
+        return LocalDate.ofEpochDay(epochDay);
+    }
+    
+    //根据年月日构造LocalDate对象，不常用，此类中还有一些类似于此类的不常用构造函数暂不列出
+    private LocalDate(int year, int month, int dayOfMonth) {
+        this.year = year;
+        this.month = (short) month;
+        this.day = (short) dayOfMonth;
+    }
+
+    //根据字符串转换
+    public static LocalDate parse(CharSequence text) {
+        return parse(text, DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+    public static LocalDate parse(CharSequence text, DateTimeFormatter formatter) {
+        Objects.requireNonNull(formatter, "formatter");
+        return formatter.parse(text, LocalDate::from);
+    }
+    
+    //从纪元时期开始计数
+    public static LocalDate ofEpochDay(long epochDay) {
+        long zeroDay = epochDay + DAYS_0000_TO_1970;
+        // find the march-based year
+        zeroDay -= 60;  // adjust to 0000-03-01 so leap day is at end of four year cycle
+        long adjust = 0;
+        if (zeroDay < 0) {
+            // adjust negative years to positive for calculation
+            long adjustCycles = (zeroDay + 1) / DAYS_PER_CYCLE - 1;
+            adjust = adjustCycles * 400;
+            zeroDay += -adjustCycles * DAYS_PER_CYCLE;
+        }
+        long yearEst = (400 * zeroDay + 591) / DAYS_PER_CYCLE;
+        long doyEst = zeroDay - (365 * yearEst + yearEst / 4 - yearEst / 100 + yearEst / 400);
+        if (doyEst < 0) {
+            // fix estimate
+            yearEst--;
+            doyEst = zeroDay - (365 * yearEst + yearEst / 4 - yearEst / 100 + yearEst / 400);
+        }
+        yearEst += adjust;  // reset any negative year
+        int marchDoy0 = (int) doyEst;
+
+        // convert march-based values back to january-based
+        int marchMonth0 = (marchDoy0 * 5 + 2) / 153;
+        int month = (marchMonth0 + 2) % 12 + 1;
+        int dom = marchDoy0 - (marchMonth0 * 306 + 5) / 10 + 1;
+        yearEst += marchMonth0 / 10;
+
+        // check year now we are certain it is correct
+        int year = YEAR.checkValidIntValue(yearEst);
+        return new LocalDate(year, month, dom);
+    }
+
+    //当前年份顺延多少年
+    public static LocalDate ofYearDay(int year, int dayOfYear) {
+        YEAR.checkValidValue(year);
+        DAY_OF_YEAR.checkValidValue(dayOfYear);
+        boolean leap = IsoChronology.INSTANCE.isLeapYear(year);
+        if (dayOfYear == 366 && leap == false) {
+            throw new DateTimeException("Invalid date 'DayOfYear 366' as '" + year + "' is not a leap year");
+        }
+        Month moy = Month.of((dayOfYear - 1) / 31 + 1);
+        int monthEnd = moy.firstDayOfYear(leap) + moy.length(leap) - 1;
+        if (dayOfYear > monthEnd) {
+            moy = moy.plus(1);
+        }
+        int dom = dayOfYear - moy.firstDayOfYear(leap) + 1;
+        return new LocalDate(year, moy.getValue(), dom);
+    }
+    
+    //增加或减少年数
+    public LocalDate minusYears(long yearsToSubtract) {
+        return (yearsToSubtract == Long.MIN_VALUE ? plusYears(Long.MAX_VALUE).plusYears(1) : plusYears(-yearsToSubtract));
+    }
+    //增加或者减少月份
+    public LocalDate minusMonths(long monthsToSubtract) {
+        return (monthsToSubtract == Long.MIN_VALUE ? plusMonths(Long.MAX_VALUE).plusMonths(1) : plusMonths(-monthsToSubtract));
+    }
+    //增加或者减少周数
+    public LocalDate minusWeeks(long weeksToSubtract) {
+        return (weeksToSubtract == Long.MIN_VALUE ? plusWeeks(Long.MAX_VALUE).plusWeeks(1) : plusWeeks(-weeksToSubtract));
+    }
+    //增加或减少天数
+    public LocalDate minusDays(long daysToSubtract) {
+        return (daysToSubtract == Long.MIN_VALUE ? plusDays(Long.MAX_VALUE).plusDays(1) : plusDays(-daysToSubtract));
+    }
+
+    //当前时间是否是传参时间之后或之前，因为LocalDate实现了ChronoLocalDate接口，而ChronoLocalDate继承了Comparable接口
+    @Override 
+    public boolean isAfter(ChronoLocalDate other) {
+        if (other instanceof LocalDate) {
+            return compareTo0((LocalDate) other) > 0;
+        }
+        return ChronoLocalDate.super.isAfter(other);
+    }
+    @Override 
+    public boolean isBefore(ChronoLocalDate other) {
+        if (other instanceof LocalDate) {
+            return compareTo0((LocalDate) other) < 0;
+        }
+        return ChronoLocalDate.super.isBefore(other);
+    }
+    @Override 
+    public int compareTo(ChronoLocalDate other) {
+        if (other instanceof LocalDate) {
+            return compareTo0((LocalDate) other);
+        }
+        return ChronoLocalDate.super.compareTo(other);
+    }
+    int compareTo0(LocalDate otherDate) {
+        int cmp = (year - otherDate.year);
+        if (cmp == 0) {
+            cmp = (month - otherDate.month);
+            if (cmp == 0) {
+                cmp = (day - otherDate.day);
+            }
+        }
+        return cmp;
+    }
+}
+```
+上面通过源码的方式列举出了我们常用的一些方法并加上了注释，最常用的方法是now，parse，isAfter，isBefore等方法，因为项目中配置生效时间和截止时间一般是字符串，可以通过parse方法获取LocalDate对象，然后now方法获取当前时间，最后通过isAfter，isBefore进行判断是否在生效时间内。当然LocalDate是精确到天数的，而我们实际使用一般是精确到时分秒，所以使用的是LocalDateTime，但是其实这两个内容很相似，所以就只介绍这一个了，下面写了一些使用案例帮助大家理解。
+
+# 测试
+```
+public class LocalDateExample {
+    public static void main(String[] args) {
+        //当前时间
+        LocalDate today = LocalDate.now();
+        System.out.println("Current date = " +today);
+
+        //自定义日期
+        LocalDate firstDay_2014 = LocalDate.of(2014, Month.JANUARY, 1);
+        System.out.println("Specific date = " + firstDay_2014);
+
+        //根据时间字符串
+        LocalDate todayStr = LocalDate.parse("2020-10-01");
+        System.out.println("TodayStr = " + todayStr);
+
+        //更换时区
+        LocalDate todayKolkata = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        System.out.println("Current date in ist="+todayKolkata);
+
+        //从起始天之后顺延365天之后
+        LocalDate dateFromBase = LocalDate.ofEpochDay(365);
+        System.out.println("365th day form base date="+dateFromBase);
+
+        //2014年之后100的日期
+        LocalDate hundredDay2014 = LocalDate.ofYearDay(2014, 100);
+        System.out.println("100th day of 2014="+hundredDay2014);
+
+        //日期大小比较
+        System.out.println(dateFromBase.isBefore(hundredDay2014));
+
+        //日期格式化
+        System.out.println(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        System.out.println(LocalDate.now().minusDays(7).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        System.out.println(LocalDate.now().minusMonths(6).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        System.out.println(LocalDate.now().toEpochDay() - LocalDate.now().minusMonths(1).toEpochDay());
+        System.out.println(LocalDateTime.now().minusDays(7).toEpochSecond(ZoneOffset.of("+8")));
+    }
+}
+```
+运行结果如下
+![](https://upload-images.jianshu.io/upload_images/9082703-719214cd5f22271b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+# 总结
+之前JDK已经有了Date，SimpleDateFormat，Calendar等用于时间操作的类了，为啥还会新开发呢，其实就是Calendar，SimpleDateFormat是会有并发风险的，但是LocalDate，LocalDateTime都是并发安全的类，实际当中使用起来也更加的方便快捷。
+
+
+
+
