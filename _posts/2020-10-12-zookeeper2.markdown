@@ -95,3 +95,5 @@ myid就是我们刚才在data文件夹下新建的文件，Zookeeper 启动时�
 ZooKeeper zk = new ZooKeeper("127.0.0.1:2181,127.0.0.1:2182,127.0.0.1:2183", 30000, new TestWatcher());
 ```
 
+# 总结与思考
+我们公司现在使用的是Redis实现的分布式锁，当时学习分布式锁的时候就说有三种实现方式分别是Reids，Zookeeper，Mysql，从左到右会越来越重，并且Zookeeper可以进行集群管理，集群主节点选举Paxos也是经常和Zookeeper一起关联，因为我平时使用ES比较多，集群选举算法是自己内部通过yml配置限制节点数，并通过一个Bully算法来选举master主节点，那么理解下来ES并没有使用Zookeeper，而是自己代码实现了Bully算法动态选举。既然Zookeeper这么重要，所以我们可以安装个Zookeeper来进行实践一下，并期望达到能大概知其然并知其所以然的效果。

@@ -206,6 +206,5 @@ public class LocalDateExample {
 # 总结
 之前JDK已经有了Date，SimpleDateFormat，Calendar等用于时间操作的类了，为啥还会新开发呢，其实就是Calendar，SimpleDateFormat是会有并发风险的，但是LocalDate，LocalDateTime都是并发安全的类，实际当中使用起来也更加的方便快捷。
 
-
-
-
+# 思考
+上面所说的SimpleDateFormat线程不安全的原因是什么，为啥DateTimeFormatter又是线程安全的？因为SimpleDateFormat有个继承自父类的全局变量calendar但是DateTimeFormatter只有final类型的全局变量，这个可以大家自己去学习一下。

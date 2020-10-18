@@ -1,0 +1,55 @@
+---
+layout:     post
+title:      "Redis(七) -- 集群（Windows）"
+subtitle:   ""
+date:       2020-10-17
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Redis
+---
+
+# 背景
+我们之前已经学习了Redis的数据结构，数据存储，性能的分析，最后我们学习下集群就算简单学习了Redis的整体功能与结构了，那么我们就正式进行安装了
+
+# 安装步骤
+- 下载Redis文件
+[https://github.com/MSOpenTech/redis/releases/](http://github.com/MSOpenTech/redis/releases/)
+本文按照参考文章下载的是3.0.504的zip版本，然后解压到磁盘文件上并复制成六份（为啥？因为我们将集群配置成3主+3从），我是存放到了C:\Redis文件夹下。
+![](http://upload-images.jianshu.io/upload_images/9082703-10769ea80f68d2e2.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- 修改conf文件
+其实跟Zookeeper，ES的安装一样，很多配置都是通过一个文件来控制得，Redis这里就是里面redis.windows.conf文件，我们需要更改port并将里面的一些cluster开头的配置给开启，端口port默认是6379，那么我们就用6379，6380，6381，6382，6383，6384来分别对应，将cluster-enabled，cluster-node-timeout前面#号删掉，cluster-config-file按照序号修改
+```
+port：监听Tcp连接的端口号
+appendonly：是否采用AOF模式记录日志，对应之前Redis(二) -- 持久化文章
+cluster-enabled：是否能够加入集群
+cluster-config-file：每个集群的配置文件
+cluster-node-timeout：集群节点超时设置
+```
+- 安装ruby
+[https://rubyinstaller.org/downloads/](http://rubyinstaller.org/downloads/)
+在这里下载2.2.4的exe版本，具体安装可以参考[Ruby 安装 - Windows](http://www.runoob.com/ruby/ruby-installation-windows.html)
+
+- 安装redis驱动
+[https://rubygems.org/gems/redis/versions/3.2.2](http://rubygems.org/gems/redis/versions/3.2.2)
+直接在页面右下角点击下载即可，下载下来叫redis-3.2.2.gem，然后放到rudy的文件中并执行命令gem install --local 当前gem文件路径，如下图所示：
+![](http://upload-images.jianshu.io/upload_images/9082703-0b5c259ba7a27aa9.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+
+- 下载集群脚本
+[https://raw.githubusercontent.com/MSOpenTech/redis/3.0/src/redis-trib.rb](http://raw.githubusercontent.com/MSOpenTech/redis/3.0/src/redis-trib.rb)
+将网页内容保存为ruby文件，名称为redis-trib.rb并放入每个Redis文件下（当然可以就一个，放在外层也行， 只需要执行一下就好），如图所示
+![](http://upload-images.jianshu.io/upload_images/9082703-92206166eaf42190.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- 启动Redis服务
+运行cmd窗口都每个Redis文件目录下并执行redis-server.exe redis.windows.conf指令开启Redis服务，如下图所示：
+![](http://upload-images.jianshu.io/upload_images/9082703-eccf299ecd03bc8f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](http://upload-images.jianshu.io/upload_images/9082703-c57a2bd3e3d1b65e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- 创建集群
+我们走到刚才集群文件的目录下执行redis-trib.rb create --replicas 1 127.0.0.1:6379 127.0.0.1:6380 127.0.0.1:6381 127.0.0.1:6382 127.0.0.1:6383 127.0.0.1:6384命令可以看到集群创建成功的消息，如下所示：
+![](http://upload-images.jianshu.io/upload_images/9082703-0a4fc349543dc780.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- 测试
+最后我们可以运行redis-cli.exe来测试一下刚才建好的集群。
