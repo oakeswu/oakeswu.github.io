@@ -43,7 +43,7 @@ cluster-node-timeout：集群节点超时设置
 ![](http://upload-images.jianshu.io/upload_images/9082703-92206166eaf42190.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
 - 启动Redis服务
-运行cmd窗口都每个Redis文件目录下并执行redis-server.exe redis.windows.conf指令开启Redis服务，如下图所示：
+运行cmd窗口到每个Redis文件目录下并执行redis-server.exe redis.windows.conf指令开启Redis服务，如下图所示：
 ![](http://upload-images.jianshu.io/upload_images/9082703-eccf299ecd03bc8f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 ![](http://upload-images.jianshu.io/upload_images/9082703-c57a2bd3e3d1b65e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
