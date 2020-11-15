@@ -1,0 +1,30 @@
+---
+layout:     post
+title:      "Linux学习(一) -- CentOS以及报错"
+subtitle:   ""
+date:       2020-11-16
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Redis
+---
+
+# 背景
+刚进公司负责攻略老搜索的时候会经常需要登到服务器上面进行测试配置，服务重启，修改JVM参数等操作，会涉及到一些linux的知识，但是一直没有系统完整的学习，打算最近按照《Linux就该这么学》系统的学习一番，之前电脑装过双系统，但是为了后面测试方便所以使用VMWare重新安装一下，下面进入正题。
+
+# 安装VM和CentOS
+- VM直接可以在[官网](http://www.vmware.com/cn/products/workstation-pro/workstation-pro-evaluation.html)直接下载，当前版本是pro 16，基本无脑安装就可以了。
+- CentOS7安装
+1：首先点击创建新的虚拟机，然后选择典型![](http://upload-images.jianshu.io/upload_images/9082703-11d4c09f58964ad5.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+2：选择稍后安装操作系统并选择好CentOS以及镜像软件
+3：重点在于自定义硬件中可以好好选择一下内存大小和处理器大小![](http://upload-images.jianshu.io/upload_images/9082703-de24d73d6cbba680.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+4：配置完成开启虚拟机即可进入CentOS的安装步骤
+
+# Application报错
+我安装了图形界面，然后在使用打开应用商店时直接报failed to download https://odrs.gnome.org/1.0/reviews/api/ratings: connection terminated unexpected。
+- 第一步我们根据字面意思来看应该是网络问题，所以打开terminal ping了一下当前地址，发现确实无法连接，然后ping了一下百度域名，发现可以ping通，证明电脑网络连接没有问题，使用浏览器直接访问该地址也没有问题。
+- 第二步直接google问题，CentOS论坛上有人报这个是CentOS的bug，但是依然没有解决方案，然后发现stackoverflow上也有人Ubuntu遇到过类似问题，通过重装gnome解决了该问题，因为Ubuntu命令与CentOS不一样（一个是Debian系，一个是RetHat系），所以直接百度到了CentOS卸载安装gnome，可惜重新卸载安装之后系统直接启动不了了，研究了大半天依然没有解决只能重装了一遍，这也是VM装linux的一个好处。
+- 第三步百度到了一个解决方案在于重新配置yum源，所以按照[教程](http://mirrors.163.com/.help/centos.html)配置了网易镜像源之后报错消失。
+
+#  总结与反思
+安装好CentOS之后可以开始好好整体学习一下linux，买过菜鸟私房菜的经典书籍，但是没有静下心来好好学习，现在也算是补个课了。其实linux很重要，因为现在生产环境基本都是linux，平时使用一些常用的譬如sudo su vim grep可能就足够了，但是生产报错的话还是还是需要更深入的学习，任重而道远。
