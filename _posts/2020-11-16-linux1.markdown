@@ -6,7 +6,7 @@ date:       2020-11-16
 author:     "OakesWu"
 header-img: "img/post-bg-2015.jpg"
 tags:
-    - Redis
+    - Linux
 ---
 
 # 背景
