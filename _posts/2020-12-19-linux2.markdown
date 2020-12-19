@@ -1,0 +1,107 @@
+---
+layout:     post
+title:      "Linux学习(二) -- 常用命令"
+subtitle:   ""
+date:       2020-12-19
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Linux
+---
+
+# 系统工作命令
+- echo
+echo [字符串 | $变量] 在终端输出字符串或者变量提取后的值
+![](http://upload-images.jianshu.io/upload_images/9082703-f247cb192514361a.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- date
+date [选项] [+指定格式] 显示或设置系统日期时间
+![](http://upload-images.jianshu.io/upload_images/9082703-51e9f3c7dc58ad32.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- reboot 
+重启计算机
+
+- poweroff
+关闭系统
+
+- clear
+清屏
+
+- wget
+wget [地址] 从指定地址中下载数据
+![](http://upload-images.jianshu.io/upload_images/9082703-8cf6669fd5695bd9.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- ps
+ps [参数] 查看系统中的进程状态
+![](http://upload-images.jianshu.io/upload_images/9082703-0156cfe691e3bd21.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- top
+top 动态监控进程活动和负载信息
+![](http://upload-images.jianshu.io/upload_images/9082703-a3d1b030e6a24d29.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- kill
+kill [参数] [进程PID] 终止某个指定的PID的服务进程
+
+# 系统状态命令
+- ifconfig
+ifconfig [网络设备] [参数] 获取网卡配置与网络状态等信息
+
+- uname
+uname [-a] 查看系统内核与系统版本等信息
+![](http://upload-images.jianshu.io/upload_images/9082703-1dee715554bd26a4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- uptime
+uptime 查看系统的负载信息
+![](http://upload-images.jianshu.io/upload_images/9082703-bd84ba1c27e674b3.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- free
+free [-h] 显示当前系统中内存的使用量信息
+![](http://upload-images.jianshu.io/upload_images/9082703-7be8408f517b4d49.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- last
+last [参数] 查看所有系统的登陆记录
+
+- history
+history [-c] 显示历史执行过的命令
+
+# 文本编辑命令
+- cat
+cat [选项] 文件 查看纯文本文件
+
+- more 
+more [选项] 文件 查看内容较多的纯文本文件
+
+- head
+head [选项] 文件]查看纯文本文档的前N行
+
+- tail
+tail [选项] 文件 查看纯文本文档的后N行
+
+- stat
+stat 文件名称 查看文件的存储和时间信息
+
+# 文件目录命令
+- touch
+touch [选项] 文件 创建空白文件或设置文件的时间
+
+- mkdir
+touch [选项] 目录 创建空白的目录
+
+- cp
+cp [选项] 源文件 复制文件或目录
+
+- mv
+mv [选项] 源文件 [目标路径] [目标文件名] 剪切文件或将文件重命名
+
+- rm
+rm [选项] 文件 删除文件或目录
+
+# 其他
+- tar
+tar [选项] [文件] 对文件进行打包压缩或解压
+
+- grep
+grep [选项] [文件] 在文本中执行关键词搜索并显示匹配的结果
+
+- find
+find [查找路径] 寻找条件 操作 按照指定条件来查找文件
