@@ -1,0 +1,71 @@
+---
+layout:     post
+title:      "Jenkins(一)  -- CentOS安装Jenkins"
+subtitle:   ""
+date:       2020-12-23
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - CI/CD
+---
+
+**本文主要参考[Jenkins入门](https://www.jenkins.io/zh/doc/book/installing/)，[Install Docker Engine on CentOS](https://docs.docker.com/engine/install/centos/)**
+# 背景
+Jenkins是一个持续集成(CI)的工具，可以持续定期编译，运行相应代码并运行UT测试和反馈结果，当前公司的CI是通过gitlab和hermes消息来搭建的，而Jenkins是开源项目，所以更方便我们研究，现在就从安装开始学习，由于电脑已经在Vmware上面安装好了CentOS，所以我们就实践一下CentOS上Jenkins的安装。
+
+# 安装Docker
+- 首先更新yum的docker库
+```
+1：sudo yum install -y yum-utils
+2：sudo yum-config-manager  --add-repo  https://download.docker.com/linux/centos/docker-ce.repo
+```
+- 然后开始安装，我这里直接安装了最新版本，上面文档中有安装其他版本的方案
+```
+3： sudo yum install docker-ce docker-ce-cli containerd.io
+```
+- 开启docker服务
+```
+4：sudo systemctl start docker
+```
+- 验证docker服务
+```
+5：sudo docker run hello-world
+```
+- docker可以非root权限运行并运行验证
+```
+6：sudo groupadd docker
+7：sudo usermod -aG docker $USER(你当前用户名称)
+8：newgrp docker 
+9：docker run hello-world
+```
+至此已安装完docker
+
+#安装Jenkins
+- 直接通过一个命令开始安装
+```
+docker run \
+  -u root \
+  --rm \
+  -d \
+  -p 8080:8080 \
+  -p 50000:50000 \
+  -v jenkins-data:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  jenkinsci/blueocean
+```
+我们此时通过官网的命令直接启动了一个docker容器，但是我浏览器进入localhost:8080时一直提示Please wait while Jenkins is getting ready to work并刷新页面，经排查发现本地映射的jenkins-data没有成功，所以将命令更新成
+```
+docker run \
+  -u root \
+  --rm \
+  -d \
+  -p 8080:8080 \
+  -p 50000:50000 \
+  -v /var/jenkins-data:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  jenkinsci/blueocean
+```
+重新执行之后发现locahost:8080可以成功打开Jenkins页面，然后我们根据指定的文件
+![](http://upload-images.jianshu.io/upload_images/9082703-1087b59b70383b52.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+输出密码之后提示offline离线，此时只要更新一下配置就好了。然后重启服务成功进入Jenkins管理页面
+![](http://upload-images.jianshu.io/upload_images/9082703-bc62897c5bc7d00e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
