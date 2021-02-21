@@ -1,0 +1,38 @@
+---
+layout:     post
+title:      "Git(一) -- 区域与回滚"
+subtitle:   ""
+date:       2021-01-18
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - GIT
+---
+
+# 前言
+git是我们常用的代码分布式管理工具，windows上我是tortorisegit小乌龟和git命令行混合使用的，提交代码等简单操作用git命令行，但是回滚，解决冲突使用小乌龟更方便。到新公司后mac就不能使用小乌龟了，所以我们需要梳理一下git工作区域以及命令来更好回滚
+
+# 三区域
+- 工作区 
+工作区就是我们编写代码的区域
+
+- 暂存区
+暂存区就类似于一个缓存区域
+git add命令将工作区代码数据提交到暂存区
+git checkout --file或者git checkout . 将清空工作区而不改变暂存区
+git reset --file或者git reset . 将清空暂存区而不改变工作区
+git rm --cached file 将删除暂存区文件而不影响工作区
+
+- 本地仓库
+本地仓库与远程仓库相对应
+git pull 将远程仓库分支代码同步到本地仓库分支
+git commit 将暂存区代码提交到本地仓库分支
+git push 将本地仓库分布代码同步到远程仓库分支
+
+![](http://upload-images.jianshu.io/upload_images/9082703-bcfb11289c8ef776.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+# git status和git diff
+- git status [-s] 描述有哪些文件已修改
+- git diff 显示未缓存的改动
+- git diff --cached 显示已缓存的改动
+- git diff head 显示所有的改动

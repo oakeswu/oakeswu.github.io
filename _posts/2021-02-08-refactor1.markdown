@@ -1,0 +1,529 @@
+---
+layout:     post
+title:      "重构(一) -- 一个入门实例"
+subtitle:   ""
+date:       2021-02-08
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - 重构
+---
+
+**本文主要参考《重构：改善既有代码的设计》**
+# 什么是重构
+重构是在不改变代码外在行为的前提下，对代码做出修改，以改进程序的内部结构的一个过程。
+
+# 实例
+```
+public class Movie {
+    public static final int CHILDRENS = 2;
+
+    public static final int REGULAR = 0;
+
+    public static final int NEW_RELEASE = 1;
+
+    private String _title;
+
+    private int _priceCode;
+
+    public Movie(String title, int priceCode) {
+        _title = title;
+        _priceCode = priceCode;
+    }
+
+    public int getPriceCode() {
+        return _priceCode;
+    }
+
+    public void setPriceCode(int arg) {
+        _priceCode = arg;
+    }
+
+    public String getTitle() {
+        return _title;
+    }
+
+
+    /**
+     * 第十步将getCharge和getFrequentRenterPoint移动到movie,因为case
+     */
+    double tenthGetCharge(int dayRented) {
+        double result = 0;
+        switch (getPriceCode()) {
+            case Movie.REGULAR:
+                result += 2;
+                if (dayRented > 2) {
+                    result += (dayRented - 2) * 1.5;
+                }
+                break;
+            case Movie.NEW_RELEASE:
+                result += dayRented * 3;
+                break;
+            case Movie.CHILDRENS:
+                result += 1.5;
+                if (dayRented > 3) {
+                    result += (dayRented - 3) * 1.5;
+                }
+                break;
+        }
+        return result;
+    }
+
+    int tenthGetFrequentRenterPoints(int dayRented) {
+        if (getPriceCode() == Movie.NEW_RELEASE && dayRented > 1) {
+            return 2;
+        }
+        return 1;
+    }
+
+
+    /**
+     * state设计模式
+     */
+    private Price _price;
+
+    public Movie(String title, Price price) {
+        _title = title;
+        _price = price;
+    }
+
+    double getCharge(int daysRented) {
+        return _price.getCharge(daysRented);
+    }
+
+    int getFrequentRenterPoints(int daysRented) {
+        return _price.getFrequentRenterPoints(daysRented);
+    }
+}
+```
+```
+public class Rental {
+
+    private Movie _movie;
+
+    private int _daysRented;
+
+    public Rental(Movie movie, int daysRented) {
+        _movie = movie;
+        _daysRented = daysRented;
+    }
+
+    public int getDaysRented() {
+        return _daysRented;
+    }
+
+    public Movie getMovie() {
+        return _movie;
+    }
+
+    /**
+     * 第三步将计算金额代码从Customer迁到Rental
+     * @return
+     */
+    double thirdGetCharge() {
+        double result = 0;
+        switch (getMovie().getPriceCode()) {
+            case Movie.REGULAR:
+                result += 2;
+                if (getDaysRented() > 2) {
+                    result += (getDaysRented() - 2) * 1.5;
+                }
+                break;
+            case Movie.NEW_RELEASE:
+                result += getDaysRented() * 3;
+                break;
+            case Movie.CHILDRENS:
+                result += 1.5;
+                if (getDaysRented() > 3) {
+                    result += (getDaysRented() - 3) * 1.5;
+                }
+                break;
+        }
+        return result;
+    }
+
+    /**
+     * 第七步将积分政策拆分到Rental
+     */
+    int seventhGetFrequentRenterPoints() {
+        if (getMovie().getPriceCode() == Movie.NEW_RELEASE && getDaysRented() > 1) {
+            return 2;
+        }
+        return 1;
+    }
+
+    /**
+     * 第十步将getCharge和getFrequentRenterPoint移动到movie,因为case
+     */
+    double tenthGetCharge() {
+        return _movie.tenthGetCharge(_daysRented);
+    }
+
+    int tenthGetFrequentRenterPoints() {
+        return _movie.tenthGetFrequentRenterPoints(_daysRented);
+    }
+}
+```
+```
+public class Customer {
+    private String _name;
+
+    private Vector _rentals = new Vector();
+
+    public Customer(String name) {
+        _name = name;
+    }
+
+    public void addRental(Rental arg) {
+        _rentals.addElement(arg);
+    }
+
+    public String getName() {
+        return _name;
+    }
+
+    public String statement() {
+        double totalAmount = 0;
+
+        int frequentRenterPoints = 0;
+
+        Enumeration rentals = _rentals.elements();
+
+        String result = "Rental Record for" + getName() + "\n";
+
+        while (rentals.hasMoreElements()) {
+            double thisAmount = 0;
+            Rental each = (Rental)rentals.nextElement();
+            //determine amounts for each line
+            switch (each.getMovie().getPriceCode()) {
+                case Movie.REGULAR:
+                    thisAmount += 2;
+                    if (each.getDaysRented() > 2) {
+                        thisAmount += (each.getDaysRented() - 2) * 1.5;
+                    }
+                    break;
+                case Movie.NEW_RELEASE:
+                    thisAmount += each.getDaysRented() * 3;
+                    break;
+                case Movie.CHILDRENS:
+                    thisAmount += 1.5;
+                    if (each.getDaysRented() > 3) {
+                        thisAmount += (each.getDaysRented() - 3) * 1.5;
+                    }
+                    break;
+            }
+            // add frequent renter points
+            frequentRenterPoints++;
+            // add bonus for a two day new release rental
+            if ((each.getMovie().getPriceCode() == Movie.NEW_RELEASE) && each.getDaysRented() > 1) {
+                frequentRenterPoints++;
+            }
+            //show figures for this rental
+            result += "\t" + each.getMovie().getTitle() + "\t" + String.valueOf(thisAmount) + "\n";
+            totalAmount += thisAmount;
+        }
+        //add footer lines
+        result += "Amount owed is " + String.valueOf(totalAmount) + "\n";
+        result += "You earned " + String.valueOf(frequentRenterPoints) + "frequent renter points";
+        return result;
+    }
+
+    /**
+     * 第一步：将switch方法抽成firstStepAmountFor方法
+     */
+    public String firstStepStatement() {
+        double totalAmount = 0;
+        int frequentRenterPoints = 0;
+        Enumeration rentals = _rentals.elements();
+        String result = "Rental Record for" + getName() + "\n";
+
+        while (rentals.hasMoreElements()) {
+            double thisAmount = 0;
+            Rental each = (Rental)rentals.nextElement();
+            thisAmount = firstStepAmountFor(each);
+
+            // add frequent renter points
+            frequentRenterPoints++;
+            // add bonus for a two day new release rental
+            if ((each.getMovie().getPriceCode() == Movie.NEW_RELEASE) && each.getDaysRented() > 1) {
+                frequentRenterPoints++;
+            }
+            //show figures for this rental
+            result += "\t" + each.getMovie().getTitle() + "\t" + String.valueOf(thisAmount) + "\n";
+            totalAmount += thisAmount;
+        }
+        //add footer lines
+        result += "Amount owed is " + String.valueOf(totalAmount) + "\n";
+        result += "You earned " + String.valueOf(frequentRenterPoints) + "frequent renter points";
+        return result;
+    }
+
+    private double firstStepAmountFor(Rental each) {
+        double thisAmount = 0;
+        switch (each.getMovie().getPriceCode()) {
+            case Movie.REGULAR:
+                thisAmount += 2;
+                if (each.getDaysRented() > 2) {
+                    thisAmount += (each.getDaysRented() - 2) * 1.5;
+                }
+                break;
+            case Movie.NEW_RELEASE:
+                thisAmount += each.getDaysRented() * 3;
+                break;
+            case Movie.CHILDRENS:
+                thisAmount += 1.5;
+                if (each.getDaysRented() > 3) {
+                    thisAmount += (each.getDaysRented() - 3) * 1.5;
+                }
+                break;
+        }
+        return thisAmount;
+    }
+
+    /**
+     * 第二步：更新正确的名称
+     */
+    public String secondStepStatement() {
+        double totalAmount = 0;
+        int frequentRenterPoints = 0;
+        Enumeration rentals = _rentals.elements();
+        String result = "Rental Record for" + getName() + "\n";
+
+        while (rentals.hasMoreElements()) {
+            double thisAmount = 0;
+            Rental each = (Rental)rentals.nextElement();
+            thisAmount = secondStepAmountFor(each);
+
+            // add frequent renter points
+            frequentRenterPoints++;
+            // add bonus for a two day new release rental
+            if ((each.getMovie().getPriceCode() == Movie.NEW_RELEASE) && each.getDaysRented() > 1) {
+                frequentRenterPoints++;
+            }
+            //show figures for this rental
+            result += "\t" + each.getMovie().getTitle() + "\t" + String.valueOf(thisAmount) + "\n";
+            totalAmount += thisAmount;
+        }
+        //add footer lines
+        result += "Amount owed is " + String.valueOf(totalAmount) + "\n";
+        result += "You earned " + String.valueOf(frequentRenterPoints) + "frequent renter points";
+        return result;
+    }
+
+    private double secondStepAmountFor(Rental aRental) {
+        double thisAmount = 0;
+        switch (aRental.getMovie().getPriceCode()) {
+            case Movie.REGULAR:
+                thisAmount += 2;
+                if (aRental.getDaysRented() > 2) {
+                    thisAmount += (aRental.getDaysRented() - 2) * 1.5;
+                }
+                break;
+            case Movie.NEW_RELEASE:
+                thisAmount += aRental.getDaysRented() * 3;
+                break;
+            case Movie.CHILDRENS:
+                thisAmount += 1.5;
+                if (aRental.getDaysRented() > 3) {
+                    thisAmount += (aRental.getDaysRented() - 3) * 1.5;
+                }
+                break;
+        }
+        return thisAmount;
+    }
+
+    /**
+     * 第四步：将方法中代码改成aRental方法调用
+     */
+    public String fourthStepStatement() {
+        double totalAmount = 0;
+        int frequentRenterPoints = 0;
+        Enumeration rentals = _rentals.elements();
+        String result = "Rental Record for" + getName() + "\n";
+
+        while (rentals.hasMoreElements()) {
+            double thisAmount = 0;
+            Rental each = (Rental)rentals.nextElement();
+            thisAmount = fourthStepAmountFor(each);
+
+            // add frequent renter points
+            frequentRenterPoints++;
+            // add bonus for a two day new release rental
+            if ((each.getMovie().getPriceCode() == Movie.NEW_RELEASE) && each.getDaysRented() > 1) {
+                frequentRenterPoints++;
+            }
+            //show figures for this rental
+            result += "\t" + each.getMovie().getTitle() + "\t" + String.valueOf(thisAmount) + "\n";
+            totalAmount += thisAmount;
+        }
+        //add footer lines
+        result += "Amount owed is " + String.valueOf(totalAmount) + "\n";
+        result += "You earned " + String.valueOf(frequentRenterPoints) + "frequent renter points";
+        return result;
+    }
+
+    private double fourthStepAmountFor(Rental aRental) {
+        return aRental.tenthGetCharge();
+    }
+
+    /**
+     * 第五步：将方法中代码改成aRental方法调用
+     */
+    public String fifthStepStatement() {
+        double totalAmount = 0;
+        int frequentRenterPoints = 0;
+        Enumeration rentals = _rentals.elements();
+        String result = "Rental Record for" + getName() + "\n";
+
+        while (rentals.hasMoreElements()) {
+            double thisAmount = 0;
+            Rental each = (Rental)rentals.nextElement();
+            thisAmount = each.tenthGetCharge();
+
+            // add frequent renter points
+            frequentRenterPoints++;
+            // add bonus for a two day new release rental
+            if ((each.getMovie().getPriceCode() == Movie.NEW_RELEASE) && each.getDaysRented() > 1) {
+                frequentRenterPoints++;
+            }
+            //show figures for this rental
+            result += "\t" + each.getMovie().getTitle() + "\t" + String.valueOf(thisAmount) + "\n";
+            totalAmount += thisAmount;
+        }
+        //add footer lines
+        result += "Amount owed is " + String.valueOf(totalAmount) + "\n";
+        result += "You earned " + String.valueOf(frequentRenterPoints) + "frequent renter points";
+        return result;
+    }
+
+    /**
+     * 第六步：将方法里面thisAmount变量去除
+     */
+    public String sixthStepStatement() {
+        double totalAmount = 0;
+        int frequentRenterPoints = 0;
+        Enumeration rentals = _rentals.elements();
+        String result = "Rental Record for" + getName() + "\n";
+
+        while (rentals.hasMoreElements()) {
+            double thisAmount = 0;
+            Rental each = (Rental)rentals.nextElement();
+
+            // add frequent renter points
+            frequentRenterPoints++;
+            // add bonus for a two day new release rental
+            if ((each.getMovie().getPriceCode() == Movie.NEW_RELEASE) && each.getDaysRented() > 1) {
+                frequentRenterPoints++;
+            }
+            //show figures for this rental
+            result += "\t" + each.getMovie().getTitle() + "\t" + String.valueOf(thisAmount) + "\n";
+            totalAmount += each.tenthGetCharge();
+        }
+        //add footer lines
+        result += "Amount owed is " + String.valueOf(totalAmount) + "\n";
+        result += "You earned " + String.valueOf(frequentRenterPoints) + "frequent renter points";
+        return result;
+    }
+
+    /**
+     * 第七步将积分政策拆分到Rental
+     */
+    public String seventhStepStatement() {
+        double totalAmount = 0;
+        int frequentRenterPoints = 0;
+        Enumeration rentals = _rentals.elements();
+        String result = "Rental Record for" + getName() + "\n";
+
+        while (rentals.hasMoreElements()) {
+            double thisAmount = 0;
+            Rental each = (Rental)rentals.nextElement();
+
+            frequentRenterPoints += each.seventhGetFrequentRenterPoints();
+            //show figures for this rental
+            result += "\t" + each.getMovie().getTitle() + "\t" + String.valueOf(thisAmount) + "\n";
+            totalAmount += each.tenthGetCharge();
+        }
+        //add footer lines
+        result += "Amount owed is " + String.valueOf(totalAmount) + "\n";
+        result += "You earned " + String.valueOf(frequentRenterPoints) + "frequent renter points";
+        return result;
+    }
+
+    /**
+     * 第八步将charge和积分拆分，但是循环增加一次
+     */
+    private double getTotalCharge() {
+        double result = 0;
+        Enumeration rentals = _rentals.elements();
+        while (rentals.hasMoreElements()) {
+            Rental each = (Rental)rentals.nextElement();
+            result += each.tenthGetCharge();
+        }
+        return result;
+    }
+
+    private int getTotalFrequentRenterPoints() {
+        int result = 0;
+        Enumeration rentals = _rentals.elements();
+        while (rentals.hasMoreElements()) {
+            Rental each = (Rental)rentals.nextElement();
+            result += each.seventhGetFrequentRenterPoints();
+        }
+        return result;
+    }
+
+}
+```
+```
+public abstract class Price {
+
+    public abstract double getCharge(int daysRented);
+
+    int getFrequentRenterPoints(int daysRented) {
+        return 1;
+    }
+}
+
+public class RegularPrice extends Price {
+
+    @Override
+    public double getCharge(int daysRented) {
+        double result = 2;
+        if (daysRented > 2) {
+            result += (daysRented -2) * 1.5;
+        }
+        return result;
+    }
+}
+
+public class ChildrensPrice extends Price {
+
+    @Override
+    public double getCharge(int daysRented) {
+        double result = 1.5;
+        if (daysRented > 3) {
+            result += (daysRented - 3) * 1.5;
+        }
+        return result;
+    }
+}
+
+public class NewReleasePrice extends Price {
+
+    @Override
+    public double getCharge(int daysRented) {
+        return daysRented * 3;
+    }
+
+    int getFrequentRenterPoints(int daysRented) {
+        return daysRented > 1 ? 2 :1;
+    }
+}
+```
+上面很简单就是一个Custom租用不同Movie时用Rental类计算费用的代码，重构步骤分为两大类，第一类是代码解耦放到合适的类中并已标出步骤顺序，第二类是引入state模式解耦，看完第一章之后就已经能体会到重构的巨大潜力。
+
+# 总结与思考
+1:重构需要有度
+不是任何时候都需要重构，比如业务代码非常少且简单，后续也不会有新的代码需要加入，不一定需要去引入设计模式等重构方案去重构，譬如上面有个循环拆分成两个循环的情况作者也表示需要斟酌，所以重构需要思考，不可盲目重构，一开始编程时就有一个好的方案。
+2:重构需要逐步稳步进行
+正如作者进行的步骤一样，重构应以保持系统功能稳定为前提，逐步推进并实施，并可采用一些已验证的方法或准则去重构，保证重构的同时不影响系统稳定性。
