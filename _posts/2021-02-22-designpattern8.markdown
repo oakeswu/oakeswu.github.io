@@ -21,6 +21,7 @@ tags:
 里氏替换原则可以正着用，无法反过来用，子类因为有自己的个性所以无法用父类去替换。
 
 - 覆盖或实现父类的方法时输入参数可以被放大
+
 ```
 public class Father {
 
@@ -64,6 +65,7 @@ public class Client {
     }
 }
 ```
+
 ![](http://upload-images.jianshu.io/upload_images/9082703-420d3330ec7d25fe.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 我们看下输出结果中子类输入参数比父类大的时候满足里氏替换原则，子类输入参数比父类小的时候输出不一致了。
 

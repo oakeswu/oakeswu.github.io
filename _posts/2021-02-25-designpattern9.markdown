@@ -21,6 +21,7 @@ tags:
 # 优劣分析
 -  优点：
 1：依赖倒置可以减少类之间的耦合，提高系统稳定性
+
 ```
 public class Driver {
     public void drive(Benz benz) {
@@ -48,7 +49,9 @@ public class BMW {
     }
 }
 ```
+
 一开始Driver买了一辆奔驰车，然后按照逻辑Driver类就有了奔驰车的驾驶能力，但是zhangsan如果新买了一辆宝马车，按照现实来说用户能开奔驰车的情况下也能开宝马车，而此时问题就在于Driver类并没有提供宝马车，如果Driver类提供的是Car抽象类而不是Benz具体类就可以了。
+
 ```
 public interface IDriver {
     //司机就能驾驶汽车
@@ -90,6 +93,7 @@ public class Client {
     }
 }
 ```
+
 我们只需要对Driver和Car进行一下抽象就能很好的解决上面的问题，并且zhangsan可以继续买各种车进行驾驶了。
 
 2：两个类之间有依赖关系，只要制定出两者之间的接口就可以独立开发，并且项目之间的单元测试可以独立开发，典型应用就是TDD(测试驱动开发)
