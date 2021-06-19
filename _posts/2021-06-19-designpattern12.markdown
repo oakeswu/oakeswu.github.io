@@ -17,7 +17,7 @@ tags:
 - 尽量通过扩展软件实体行为实现变化，而不是通过修改已有的代码实现
 
 # 实例
-![](http://upload-images.jianshu.io/upload_images/9082703-1a2cbe034580b302.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](/img/doc/designPattern/12/12-1.png)
 ```
 public interface IBook {
 
@@ -78,7 +78,7 @@ public class BookStore {
 }
 ```
 我们以书店销售书为例，书籍目前有三个方法，现在书籍需要增加一个折扣方法，专门进行打折处理，如果直接在NovelBook的getPrice方法上修改，就会影响到老逻辑，另外如果折扣价是对一部分人开放，这种方式就不行。我们换另一种方式去做，如下所示：
-![](http://upload-images.jianshu.io/upload_images/9082703-5f947142be0dcd30.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](/img/doc/designPattern/12/12-2.png)
 ```
 public class OffNovelBook extends NovelBook {
     

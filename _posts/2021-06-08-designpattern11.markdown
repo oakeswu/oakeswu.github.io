@@ -19,7 +19,7 @@ tags:
 - 谨慎使用Serializable接口
 
 # 只和朋友交流
-![](http://upload-images.jianshu.io/upload_images/9082703-050ec4bdf79e0dab.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](/img/doc/designPattern/11/11-1.png)
 
 ```
 public class Girl {
@@ -100,11 +100,11 @@ public class Client {
 }
 ```
 修改后的类图是
-![](http://upload-images.jianshu.io/upload_images/9082703-bcdcba47a7db75cc.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](/img/doc/designPattern/11/11-2.png)
 我们发现代码更改后Teacher类只跟GroupLeader沟通，不再需要跟Girl类耦合。
 
 # 朋友圈也是有距离的
-![](http://upload-images.jianshu.io/upload_images/9082703-8c12b917d6eba843.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](/img/doc/designPattern/11/11-3.png)
 ```
 public class Wizard {
     private Random random = new Random(System.currentTimeMillis());
