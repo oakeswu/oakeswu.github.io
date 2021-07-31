@@ -1,0 +1,36 @@
+---
+layout:     post
+title:      "线下机器反复FullGC报警"
+subtitle:   ""
+date:       2021-07-17
+author:     "OakesWu"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - JVM
+---
+
+**为了避免公司信息安全所以本文没有放置截图，内网wiki包含截图**
+# 问题描述
+从周中开始偶尔收到线下Engine服务的jvm.fullgc.count报警，最新的gc数大于5次。
+
+# 问题原因
+项目中try catch捕获了异常之后没调用System.exit(0)方法进行JVM进程的关闭，关闭过程中会进程GC操作，当异常比较多即System.exit频率比较高时出现了上面的报错。
+
+# 问题定位
+- 首先第一步是等到机器上面去切换到root，通过top命令查看一下进程信息，我们发现有一个cpu很高的java进程，但是进程id一直变化，刚要通过jstate去查看时进程id就不在了
+- 找了一下[pid not found](https://www.cnblogs.com/wx170119/p/10445627.html)，换成公司的另一个账号之后重新通过top命令或者ps ef | grep java命令查看进程id
+- 通过top -Hp 进程id查看到进程中cpu高的线程id是多少
+- 将上面查到的线程id转换成16进制
+- 通过jstack -l 进程id | grep 16进制线程id -C 100打印出线程的栈信息
+- 通过查看栈信息我们可以定位到项目代码的行数位置
+- 然后定位到真实代码的那一行就是try catch捕获异常之后执行的System.exit(0)方法
+- 通过公司log日志查看为啥会报错，根据报错信息进行处理就好了
+
+# 结论
+-  System.exit会关闭掉jvm进程，这也解释了为啥进程id会反复变化
+- System.exit方法会gc，所以使用上需要谨慎，考虑清楚是否应该使用
+- FullGC问题还有很多其他工具使用，我这里就用到了jstack，中途也用了jstate查看了一下fullgc数和各代的使用内存大小，还有jmap等工具
+
+# 思考与问题
+- System.exit我理解应该是关闭了一个JVM进程即服务进程，那么从top命令能看出来java服务进程一直在变换，是什么一直在启动服务呢？
+问了隔壁plus同事，有一个类似k8s容器服务管理的服务，当检测到服务挂掉之后会自动尝试重启。
